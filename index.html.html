@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>승부차기</title>
+<style>
+:root{--night:#0d1626;--grass:#1f6b3f;--grass2:#1a5c36;--line:#f3f1e7;--keeper:#e8457c;--gold:#ffd23f}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;background:var(--night);color:var(--line);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;display:flex;justify-content:center;padding:16px}
+.app{width:min(100%,640px)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+.dots{display:flex;gap:8px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);opacity:.5;display:grid;place-items:center;font-size:12px;font-weight:700}
+.dot.goal{background:var(--gold);border-color:var(--gold);color:#222;opacity:1}
+.dot.save{background:var(--keeper);border-color:var(--keeper);color:#fff;opacity:1}
+.field{position:relative;width:100%;aspect-ratio:3/2;border-radius:14px;overflow:hidden;
+ background:repeating-linear-gradient(90deg,var(--grass) 0 10%,var(--grass2) 10% 20%);
+ box-shadow:0 0 0 3px #0008 inset}
+.field::before{content:"";position:absolute;left:0;right:0;top:0;height:8%;background:linear-gradient(#0d1626,#0d162600)}
+.box{position:absolute;left:8%;right:8%;top:6%;height:56%;border:2px solid #f3f1e766;border-top:none}
+.goal{position:absolute;left:14%;top:10%;width:72%;height:40%;border:5px solid var(--line);border-bottom:none;
+ background:repeating-linear-gradient(45deg,#ffffff1a 0 1px,transparent 1px 9px),repeating-linear-gradient(-45deg,#ffffff1a 0 1px,transparent 1px 9px),#0000002e}
+.zones{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+.zone{background:transparent;border:1px dashed #f3f1e733;color:transparent;font:inherit;font-size:.8rem;cursor:pointer;transition:background .15s,color .15s}
+.zone:hover,.zone:focus-visible{background:#ffd23f33;color:var(--line);outline:2px solid var(--gold);outline-offset:-2px}
+.zone:disabled{cursor:default;background:transparent;outline:none;color:transparent}
+.spot{position:absolute;left:50%;top:88%;width:2%;aspect-ratio:1;border-radius:50%;background:var(--line);opacity:.6;transform:translate(-50%,-50%)}
+.keeper{position:absolute;left:50%;top:41%;width:9%;aspect-ratio:1/1.9;transform:translate(-50%,-50%);
+ transition:left .45s cubic-bezier(.2,.8,.3,1),top .45s cubic-bezier(.2,.8,.3,1),transform .45s;pointer-events:none}
+.keeper::before{content:"";position:absolute;inset:18% 12% 0;background:var(--keeper);border-radius:40% 40% 18% 18%}
+.keeper::after{content:"";position:absolute;left:25%;right:25%;top:0;aspect-ratio:1;background:#f2c9a0;border-radius:50%}
+.keeper i{position:absolute;top:12%;width:26%;aspect-ratio:1;background:var(--gold);border-radius:50%}
+.keeper i:first-child{left:-12%}.keeper i:last-child{right:-12%}
+.ball{position:absolute;left:50%;top:88%;width:5.5%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);
+ background:radial-gradient(circle at 35% 30%,#fff,#d9d9d9 60%,#8a8a8a);box-shadow:0 3px 5px #0006;
+ transition:left .5s cubic-bezier(.2,.7,.3,1),top .5s cubic-bezier(.2,.7,.3,1),transform .5s}
+.msg{position:absolute;left:0;right:0;top:66%;text-align:center;font-size:clamp(1.6rem,7vw,2.6rem);font-weight:900;opacity:0;transition:opacity .2s;text-shadow:0 3px 0 #0007}
+.msg.show{opacity:1}
+.msg.g{color:var(--gold)}.msg.s{color:var(--keeper)}
+.info{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px}
+#hint{opacity:.8;font-size:.95rem}
+button.restart{background:var(--gold);color:#1a1a1a;border:0;border-radius:8px;padding:10px 18px;font:inherit;font-weight:800;cursor:pointer}
+button.restart[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.keeper,.ball{transition-duration:.01s}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>승부차기</h1>
+    <div class="dots" id="dots" aria-label="슛 기록"></div>
+  </header>
+  <div class="field" id="field">
+    <div class="box"></div>
+    <div class="goal"><div class="zones" id="zones"></div></div>
+    <div class="spot"></div>
+    <div class="keeper" id="keeper"><i></i><i></i></div>
+    <div class="ball" id="ball"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="info">
+    <p id="hint">골문에서 공을 보낼 곳을 선택하세요</p>
+    <button class="restart" id="restart" hidden>다시 하기</button>
+  </div>
+</main>
+<script>
+const TOTAL = 5;
+const G = {l:14, t:10, w:72, h:40};
+const NAMES = [["왼쪽 위","가운데 위","오른쪽 위"],["왼쪽 아래","가운데 아래","오른쪽 아래"]];
+const $ = id => document.getElementById(id);
+const zonesEl = $("zones"), ball = $("ball"), keeper = $("keeper"), msg = $("msg"), hint = $("hint"), dotsEl = $("dots"), restart = $("restart");
+let results = [], busy = false;
+
+const center = (c, r) => ({x: G.l + G.w * (c + .5) / 3, y: G.t + G.h * (r + .5) / 2});
+
+for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
+  const b = document.createElement("button");
+  b.className = "zone"; b.textContent = NAMES[r][c]; b.dataset.c = c; b.dataset.r = r;
+  b.addEventListener("click", () => shoot(c, r));
+  zonesEl.appendChild(b);
+}
+
+function drawDots() {
+  dotsEl.innerHTML = "";
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement("div");
+    d.className = "dot " + (results[i] || "");
+    d.textContent = results[i] === "goal" ? "O" : results[i] === "save" ? "X" : "";
+    dotsEl.appendChild(d);
+  }
+}
+
+function setZonesDisabled(v) { zonesEl.querySelectorAll("button").forEach(b => b.disabled = v); }
+
+function shoot(c, r) {
+  if (busy || results.length >= TOTAL) return;
+  busy = true; setZonesDisabled(true); hint.textContent = "슛!";
+
+  // 골키퍼: 무작위로 6칸 중 한 곳을 선택
+  const kc = Math.floor(Math.random() * 3), kr = Math.floor(Math.random() * 2);
+  const dist = Math.abs(kc - c) + Math.abs(kr - r);
+  let saved = dist === 0 || (dist === 1 && Math.random() < 0.3);
+  const fingertip = saved && dist === 1;
+
+  const t = center(c, r), k = center(kc, kr);
+  ball.style.left = t.x + "%"; ball.style.top = t.y + "%";
+  ball.style.transform = "translate(-50%,-50%) scale(.55)";
+  keeper.style.left = k.x + "%"; keeper.style.top = k.y + "%";
+  const rot = kc === 0 ? -65 : kc === 2 ? 65 : 0;
+  keeper.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
+
+  setTimeout(() => {
+    results.push(saved ? "save" : "goal");
+    msg.className = "msg show " + (saved ? "s" : "g");
+    msg.textContent = saved ? (fingertip ? "손끝 선방!" : "선방!") : "골!";
+    drawDots();
+    const done = results.length >= TOTAL;
+    setTimeout(() => done ? finish() : nextRound(), 1100);
+  }, 650);
+}
+
+function nextRound() {
+  msg.className = "msg";
+  ball.style.transition = "none"; keeper.style.transition = "none";
+  ball.style.left = "50%"; ball.style.top = "88%"; ball.style.transform = "translate(-50%,-50%) scale(1)";
+  keeper.style.left = "50%"; keeper.style.top = "41%"; keeper.style.transform = "translate(-50%,-50%)";
+  void ball.offsetWidth;
+  ball.style.transition = ""; keeper.style.transition = "";
+  busy = false; setZonesDisabled(false);
+  hint.textContent = `${results.length + 1}번째 슛 — 방향을 고르세요`;
+}
+
+function finish() {
+  const goals = results.filter(x => x === "goal").length;
+  msg.className = "msg show g";
+  msg.textContent = `${goals} / ${TOTAL} 골`;
+  hint.textContent = goals >= 4 ? "완벽한 키커!" : goals >= 3 ? "좋은 승부였어요" : "골키퍼가 한 수 위였네요";
+  restart.hidden = false;
+}
+
+restart.addEventListener("click", () => {
+  results = []; drawDots(); restart.hidden = true; nextRound();
+  hint.textContent = "골문에서 공을 보낼 곳을 선택하세요";
+});
+
+drawDots();
+</script>
+</body>
+</html>
