@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공강 플래너</title>
+<style>
+  body { font-family: -apple-system, "Noto Sans KR", sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 1.5rem; }
+  label { display: block; margin: 16px 0 6px; font-weight: 600; }
+  input[type=time], input[type=number] { padding: 8px; font-size: 1rem; }
+  .types button { padding: 10px 16px; margin-right: 8px; border: 1px solid #aaa; border-radius: 8px; background: #fff; font-size: 1rem; cursor: pointer; }
+  .types button.active { background: #2f6fed; color: #fff; border-color: #2f6fed; }
+  #add { margin-top: 20px; padding: 10px 20px; font-size: 1rem; border: 0; border-radius: 8px; background: #222; color: #fff; cursor: pointer; }
+  ul { padding: 0; list-style: none; }
+  li { padding: 10px; margin-top: 8px; border: 1px solid #ddd; border-radius: 8px; display: flex; justify-content: space-between; }
+  li button { border: 0; background: none; cursor: pointer; color: #c00; }
+</style>
+</head>
+<body>
+  <h1>공강 플래너</h1>
+
+  <label>공강 시작</label>
+  <input type="time" id="start" value="10:00">
+  <label>공강 종료</label>
+  <input type="time" id="end" value="11:00">
+
+  <label>활동 유형</label>
+  <div class="types" id="types">
+    <button data-type="공부" class="active">📚 공부</button>
+    <button data-type="식사">🍚 식사</button>
+    <button data-type="휴식">😴 휴식</button>
+  </div>
+
+  <button id="add">추가</button>
+
+  <h2>내 공강 목록</h2>
+  <ul id="list"></ul>
+
+<script>
+  let type = "공부";
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem("gonggang") || "[]"); } catch (e) {}
+
+  const $ = (id) => document.getElementById(id);
+
+  $("types").addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    type = e.target.dataset.type;
+    document.querySelectorAll("#types button").forEach((b) => b.classList.toggle("active", b === e.target));
+  });
+
+  $("add").addEventListener("click", () => {
+    const s = $("start").value, e = $("end").value;
+    if (!s || !e || s >= e) { alert("시간을 올바르게 입력하세요 (종료가 시작보다 늦어야 해요)."); return; }
+    items.push({ s, e, type });
+    save(); render();
+  });
+
+  function save() { try { localStorage.setItem("gonggang", JSON.stringify(items)); } catch (e) {} }
+
+  function render() {
+    $("list").innerHTML = "";
+    items.forEach((it, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${it.s} ~ ${it.e} · <b>${it.type}</b></span>`;
+      const del = document.createElement("button");
+      del.textContent = "삭제";
+      del.onclick = () => { items.splice(i, 1); save(); render(); };
+      li.appendChild(del);
+      $("list").appendChild(li);
+    });
+  }
+  render();
+</script>
+</body>
+</html>
