@@ -3,75 +3,220 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>공강 플래너</title>
+<title>국민대 팀플 보드</title>
 <style>
-  body { font-family: -apple-system, "Noto Sans KR", sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; color: #222; }
-  h1 { font-size: 1.5rem; }
-  label { display: block; margin: 16px 0 6px; font-weight: 600; }
-  input[type=time], input[type=number] { padding: 8px; font-size: 1rem; }
-  .types button { padding: 10px 16px; margin-right: 8px; border: 1px solid #aaa; border-radius: 8px; background: #fff; font-size: 1rem; cursor: pointer; }
-  .types button.active { background: #2f6fed; color: #fff; border-color: #2f6fed; }
-  #add { margin-top: 20px; padding: 10px 20px; font-size: 1rem; border: 0; border-radius: 8px; background: #222; color: #fff; cursor: pointer; }
-  ul { padding: 0; list-style: none; }
-  li { padding: 10px; margin-top: 8px; border: 1px solid #ddd; border-radius: 8px; display: flex; justify-content: space-between; }
-  li button { border: 0; background: none; cursor: pointer; color: #c00; }
+:root{--bg:#f4f6fb;--card:#fff;--text:#1b2133;--sub:#6a7390;--line:#e5e8f2;--brand:#5b4df0;--brand2:#8b5cf6;--red:#e5484d;--amber:#d98a00;--green:#16a34a;--blue:#2f7cf6;--sh:0 6px 22px rgba(40,50,110,.08)}
+:root[data-theme=dark]{--bg:#0e1120;--card:#171b30;--text:#eef0fb;--sub:#9aa3c2;--line:#2a3050;--sh:none}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"Pretendard","Noto Sans KR",sans-serif;line-height:1.5}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:26px 0 90px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:1.6rem;letter-spacing:-.5px}
+header p{margin:4px 0 0;opacity:.88;font-size:.92rem}
+.tools{display:flex;gap:8px;align-items:center}
+.dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;cursor:pointer;padding:0}
+.icon{background:rgba(255,255,255,.2);border:0;color:#fff;border-radius:10px;padding:7px 11px;cursor:pointer}
+main{margin-top:-62px;padding-bottom:40px}
+.card{background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--sh)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--sh)}
+.stat b{display:block;font-size:1.6rem}.stat span{color:var(--sub);font-size:.8rem}
+.prog{margin-top:12px}.prog .r{display:flex;justify-content:space-between;font-weight:700;font-size:.9rem;margin-bottom:8px}
+.track{height:9px;background:var(--bg);border-radius:99px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2));border-radius:99px;transition:width .4s}
+.team{display:flex;gap:10px;overflow-x:auto;margin:12px 0;padding-bottom:4px}
+.mem{display:flex;gap:10px;align-items:center;min-width:150px;background:var(--card);border-radius:14px;padding:9px 12px;box-shadow:var(--sh)}
+.mem small{display:block;color:var(--sub);font-size:.74rem}
+i.av{width:30px;height:30px;border-radius:50%;color:#fff;font-style:normal;font-weight:700;font-size:.8rem;display:grid;place-items:center;flex:none}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+h2{margin:0 0 12px;font-size:1.05rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.row input,.row select{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:0}
+.row input:focus,.row select:focus{outline:2px solid var(--brand);border-color:transparent}
+.btn{border:0;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+.btn.g{background:var(--bg);color:var(--sub)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:8px 10px;cursor:pointer;color:var(--sub)}
+.seg button.on{background:var(--brand);color:#fff}
+.chips{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:99px;font-weight:700;font-size:.76rem;background:var(--bg);border:0;color:var(--sub)}
+button.chip{cursor:pointer}button.chip.on{background:var(--brand);color:#fff}
+.chip.red{background:rgba(229,72,77,.14);color:var(--red)}.chip.amber{background:rgba(217,138,0,.15);color:var(--amber)}
+.chip.green{background:rgba(22,163,74,.14);color:var(--green)}.chip.blue{background:rgba(47,124,246,.14);color:var(--blue)}
+.item{display:flex;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.item .m{flex:1;min-width:0}.item b{display:block;font-size:.95rem}
+.item.done b{text-decoration:line-through;opacity:.55}
+.meta i.av{width:20px;height:20px;font-size:.65rem}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:.78rem;color:var(--sub);margin-top:3px}
+.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);background:none;color:transparent;cursor:pointer;font-weight:800;flex:none}
+.item.done .chk{background:var(--green);border-color:var(--green);color:#fff}
+.x button{border:0;background:none;cursor:pointer;opacity:.55;padding:4px}.x button:hover{opacity:1}
+.pick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pill{padding:7px 12px;border-radius:12px;background:rgba(91,77,240,.12);color:var(--brand);font-weight:700;font-size:.82rem}
+.day{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.dn{width:34px;height:34px;border-radius:10px;background:var(--bg);display:grid;place-items:center;font-weight:800;flex:none}
+.day.today .dn{background:var(--brand);color:#fff}
+.slots{flex:1;display:grid;gap:6px}
+.slot{display:flex;align-items:center;gap:8px;font-size:.84rem;border-left:4px solid var(--brand);padding:2px 0 2px 8px;flex-wrap:wrap}
+.slot.meal{border-color:var(--amber)}.slot.rest{border-color:var(--green)}
+.slot .x{margin-left:auto}
+.empty{text-align:center;color:var(--sub);padding:22px 0;font-size:.9rem}
+.bar{display:grid;grid-template-columns:70px 1fr 64px;gap:8px;align-items:center;font-size:.8rem;margin-top:6px}
+footer{text-align:center;color:var(--sub);font-size:.8rem;margin-top:18px}
+footer button{border:0;background:none;color:var(--brand);cursor:pointer;font-weight:700}
+@media(max-width:800px){.cols{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
-  <h1>공강 플래너</h1>
-
-  <label>공강 시작</label>
-  <input type="time" id="start" value="10:00">
-  <label>공강 종료</label>
-  <input type="time" id="end" value="11:00">
-
-  <label>활동 유형</label>
-  <div class="types" id="types">
-    <button data-type="공부" class="active">📚 공부</button>
-    <button data-type="식사">🍚 식사</button>
-    <button data-type="휴식">😴 휴식</button>
+<header><div class="wrap top">
+  <div><h1>🏫 국민대 팀플 보드</h1><p>우리 팀의 할 일 · 담당자 · 마감 · 공강을 한눈에</p></div>
+  <div class="tools"><span id="sw" style="display:flex;gap:6px"></span><button class="icon" id="theme">🌙</button></div>
+</div></header>
+<main class="wrap">
+  <div class="stats">
+    <div class="stat"><b id="s1">0</b><span>📋 전체 할 일</span></div>
+    <div class="stat"><b id="s2">0</b><span>🔥 진행 중</span></div>
+    <div class="stat"><b id="s3">0</b><span>⏰ 7일 내 마감</span></div>
+    <div class="stat"><b id="s4">0</b><span>🕒 오늘의 공강</span></div>
   </div>
+  <div class="card prog"><div class="r"><span>팀 전체 진행률</span><span id="pct"></span></div><div class="track"><div class="fill" id="fill" style="width:0"></div></div></div>
+  <div class="team" id="team"></div>
 
-  <button id="add">추가</button>
+  <div class="cols">
+    <section class="card">
+      <h2>✅ 팀 할 일</h2>
+      <form class="row" id="tf">
+        <input id="t-title" required maxlength="60" placeholder="할 일 (예: 발표 PPT 만들기)" style="flex:1 1 100%">
+        <input id="t-owner" required maxlength="20" list="members" placeholder="담당자" style="flex:1;width:90px">
+        <input id="t-due" type="date" required style="flex:1">
+        <button class="btn" id="t-btn">추가</button><button type="button" class="btn g" id="t-x" hidden>취소</button>
+      </form>
+      <div class="chips" id="fchips"></div>
+      <div id="tlist"></div>
+    </section>
 
-  <h2>내 공강 목록</h2>
-  <ul id="list"></ul>
+    <section class="card">
+      <h2>🕒 공강 &amp; 활동</h2>
+      <form class="row" id="ff">
+        <input id="f-o" required maxlength="20" list="members" placeholder="이름" style="flex:1;width:80px">
+        <select id="f-d"><option value="0">월</option><option value="1">화</option><option value="2">수</option><option value="3">목</option><option value="4">금</option></select>
+        <input id="f-s" type="time" required value="10:00"><input id="f-e" type="time" required value="11:00">
+        <div class="seg" id="f-t"><button type="button" data-t="study" class="on">📚 공부</button><button type="button" data-t="meal">🍚 식사</button><button type="button" data-t="rest">😴 휴식</button></div>
+        <input id="f-p" list="places" maxlength="20" placeholder="장소 (선택)" style="flex:1;width:100px">
+        <button class="btn" id="f-btn">추가</button><button type="button" class="btn g" id="f-x" hidden>취소</button>
+      </form>
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">🤝 팀 모임 추천 시간</div>
+      <div id="common"></div>
+      <div id="flist"></div>
+      <div id="acts" style="margin-top:10px"></div>
+    </section>
+  </div>
+  <footer>데이터는 이 브라우저에 저장돼요 · <button id="exp">내보내기</button> · <button id="imp">불러오기</button><input type="file" id="file" accept=".json" hidden></footer>
+</main>
+<datalist id="members"></datalist>
+<datalist id="places"><option value="성곡도서관"><option value="복지관"><option value="법학관"><option value="경영관"><option value="과학관"><option value="조형관"><option value="예술관"><option value="미래관"></datalist>
 
 <script>
-  let type = "공부";
-  let items = [];
-  try { items = JSON.parse(localStorage.getItem("gonggang") || "[]"); } catch (e) {}
+const $=id=>document.getElementById(id),K1="teamboard-tasks-v1",K2="teamboard-free-v1";
+const ST={todo:"할 일",doing:"진행 중",done:"완료"},NEXT={todo:"doing",doing:"done",done:"todo"};
+const DAYS=["월","화","수","목","금"],TY={study:["📚","공부"],meal:["🍚","식사"],rest:["😴","휴식"]};
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||"[]")}catch(e){return[]}};
+let tasks=ld(K1).map(t=>({status:"todo",...t})),free=ld(K2),fil="",tEdit=null,fEdit=null,ftype="study";
+const sv=()=>{try{localStorage.setItem(K1,JSON.stringify(tasks));localStorage.setItem(K2,JSON.stringify(free))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const COL=["#5b4df0","#db2777","#059669","#d97706","#0284c7","#7c3aed","#dc2626"];
+const color=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%COL.length;return COL[h]};
+const av=n=>`<i class="av" style="background:${color(n)}">${esc(n[0])}</i>`;
+const dday=d=>{const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(d+"T00:00:00")-t)/864e5)};
+const mm=t=>{const[h,m]=t.split(":");return+h*60+ +m},hm=n=>String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
+const dur=n=>n<60?`${n}분`:n%60?`${Math.floor(n/60)}시간 ${n%60}분`:`${n/60}시간`;
 
-  const $ = (id) => document.getElementById(id);
+/* 테마 · 포인트 색상 */
+const ACC=[["#5b4df0","#8b5cf6"],["#c8102e","#e0566b"],["#0f9d75","#34c9a0"],["#2f7cf6","#60a5fa"]];
+let theme,acc=0;try{theme=localStorage.getItem("tb-theme");acc=+localStorage.getItem("tb-acc")||0}catch(e){}
+if(!theme)theme=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+function look(){const r=document.documentElement;r.dataset.theme=theme;r.style.setProperty("--brand",ACC[acc][0]);r.style.setProperty("--brand2",ACC[acc][1]);
+  $("theme").textContent=theme==="dark"?"☀️":"🌙";try{localStorage.setItem("tb-theme",theme);localStorage.setItem("tb-acc",acc)}catch(e){}}
+$("sw").innerHTML=ACC.map((c,i)=>`<button class="dot" title="포인트 색상" style="background:${c[0]}" onclick="acc=${i};look()"></button>`).join("");
+$("theme").onclick=()=>{theme=theme==="dark"?"light":"dark";look()};look();
 
-  $("types").addEventListener("click", (e) => {
-    if (e.target.tagName !== "BUTTON") return;
-    type = e.target.dataset.type;
-    document.querySelectorAll("#types button").forEach((b) => b.classList.toggle("active", b === e.target));
-  });
+/* 할 일 */
+$("tf").addEventListener("submit",e=>{e.preventDefault();
+  const t={title:$("t-title").value.trim(),owner:$("t-owner").value.trim(),due:$("t-due").value};if(!t.title||!t.owner||!t.due)return;
+  tEdit?tasks=tasks.map(x=>x.id===tEdit?{...x,...t}:x):tasks.push({id:Date.now().toString(36),status:"todo",...t});
+  tReset();sv();render()});
+function tReset(){tEdit=null;$("t-title").value="";$("t-due").value="";$("t-btn").textContent="추가";$("t-x").hidden=true}
+$("t-x").onclick=tReset;
+function tEditStart(id){const t=tasks.find(x=>x.id===id);if(!t)return;tEdit=id;$("t-title").value=t.title;$("t-owner").value=t.owner;$("t-due").value=t.due;$("t-btn").textContent="저장";$("t-x").hidden=false;$("t-title").focus()}
+const setS=(id,s)=>{tasks=tasks.map(t=>t.id===id?{...t,status:s}:t);sv();render()};
+const tog=id=>setS(id,tasks.find(t=>t.id===id).status==="done"?"todo":"done"),cyc=id=>setS(id,NEXT[tasks.find(t=>t.id===id).status]);
+function tDel(id){if(!confirm("이 할 일을 삭제할까요?"))return;tasks=tasks.filter(t=>t.id!==id);if(tEdit===id)tReset();sv();render()}
+$("fchips").innerHTML=[["","전체"],["todo","할 일"],["doing","진행 중"],["done","완료"]].map(([v,l])=>`<button class="chip" data-f="${v}">${l}</button>`).join("");
+$("fchips").onclick=e=>{const b=e.target.closest("button");if(b){fil=b.dataset.f;render()}};
+const dBadge=t=>{if(t.status==="done")return'<span class="chip green">완료</span>';const d=dday(t.due);
+  return d<0?`<span class="chip red">D+${-d} 지남</span>`:d===0?'<span class="chip red">D-Day</span>':d<=3?`<span class="chip amber">D-${d}</span>`:`<span class="chip blue">D-${d}</span>`};
 
-  $("add").addEventListener("click", () => {
-    const s = $("start").value, e = $("end").value;
-    if (!s || !e || s >= e) { alert("시간을 올바르게 입력하세요 (종료가 시작보다 늦어야 해요)."); return; }
-    items.push({ s, e, type });
-    save(); render();
-  });
+/* 공강 */
+const synT=()=>document.querySelectorAll("#f-t button").forEach(b=>b.classList.toggle("on",b.dataset.t===ftype));
+$("f-t").onclick=e=>{const b=e.target.closest("button");if(b){ftype=b.dataset.t;synT()}};
+function fReset(){fEdit=null;ftype="study";synT();$("f-p").value="";$("f-btn").textContent="추가";$("f-x").hidden=true}
+$("f-x").onclick=fReset;
+$("ff").addEventListener("submit",e=>{e.preventDefault();
+  const o=$("f-o").value.trim(),s=$("f-s").value,en=$("f-e").value;
+  if(!o||!s||!en||mm(s)>=mm(en)){alert("종료 시간은 시작 시간보다 늦어야 해요.");return}
+  const r={owner:o,day:+$("f-d").value,s,e:en,type:ftype,place:$("f-p").value.trim()};
+  fEdit?free=free.map(x=>x.id===fEdit?{...x,...r}:x):free.push({id:Date.now().toString(36),...r});
+  fReset();sv();render()});
+function fEditStart(id){const f=free.find(x=>x.id===id);if(!f)return;fEdit=id;
+  $("f-o").value=f.owner;$("f-d").value=f.day;$("f-s").value=f.s;$("f-e").value=f.e;$("f-p").value=f.place||"";ftype=f.type;synT();$("f-btn").textContent="저장";$("f-x").hidden=false}
+function fDel(id){free=free.filter(f=>f.id!==id);if(fEdit===id)fReset();sv();render()}
+/* 요일별 동시 공강 인원 계산 (30분 이상, 2명 이상) */
+function common(list){
+  const people=[...new Set(list.map(f=>f.owner))],out=[];
+  DAYS.forEach((_,d)=>{const ev=[];
+    people.forEach(p=>{const iv=list.filter(f=>f.owner===p&&f.day===d).map(f=>[mm(f.s),mm(f.e)]).sort((a,b)=>a[0]-b[0]),m=[];
+      iv.forEach(x=>{const l=m[m.length-1];l&&x[0]<=l[1]?l[1]=Math.max(l[1],x[1]):m.push([...x])});
+      m.forEach(x=>ev.push([x[0],1],[x[1],-1]))});
+    ev.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let c=0;
+    ev.forEach(([t,v],i)=>{if(i&&t>ev[i-1][0]&&c>=2&&t-ev[i-1][0]>=30)out.push({d,s:ev[i-1][0],e:t,c});c+=v})});
+  return out}
 
-  function save() { try { localStorage.setItem("gonggang", JSON.stringify(items)); } catch (e) {} }
+/* 렌더 */
+function render(){
+  const open=tasks.filter(t=>t.status!=="done"),done=tasks.length-open.length,td=new Date().getDay()-1;
+  $("s1").textContent=tasks.length;$("s2").textContent=tasks.filter(t=>t.status==="doing").length;
+  $("s3").textContent=open.filter(t=>{const d=dday(t.due);return d>=0&&d<=7}).length;$("s4").textContent=free.filter(f=>f.day===td).length;
+  const pct=tasks.length?Math.round(done/tasks.length*100):0;$("pct").textContent=`${pct}% (${done}/${tasks.length})`;$("fill").style.width=pct+"%";
+  const names=[...new Set([...tasks.map(t=>t.owner),...free.map(f=>f.owner)])].sort();
+  $("members").innerHTML=names.map(n=>`<option value="${esc(n)}">`).join("");
+  $("team").innerHTML=names.map(n=>{const a=tasks.filter(t=>t.owner===n);return`<div class="mem">${av(n)}<div><b>${esc(n)}</b><small>할 일 ${a.filter(t=>t.status==="done").length}/${a.length} · 공강 ${free.filter(f=>f.owner===n).length}</small></div></div>`}).join("");
+  document.querySelectorAll("#fchips button").forEach(b=>b.classList.toggle("on",b.dataset.f===fil));
+  const rows=tasks.filter(t=>!fil||t.status===fil).sort((a,b)=>(a.status==="done")-(b.status==="done")||a.due.localeCompare(b.due));
+  $("tlist").innerHTML=rows.length?rows.map(t=>`<div class="item ${t.status}"><button class="chk" onclick="tog('${t.id}')" title="완료">✓</button>
+    <div class="m"><b>${esc(t.title)}</b><div class="meta">${av(t.owner)}${esc(t.owner)} · 📅 ${t.due} ${dBadge(t)}<button class="chip" onclick="cyc('${t.id}')" title="누르면 상태가 바뀌어요">${ST[t.status]} ›</button></div></div>
+    <div class="x"><button onclick="tEditStart('${t.id}')" title="수정">✏️</button><button onclick="tDel('${t.id}')" title="삭제">🗑️</button></div></div>`).join("")
+    :`<div class="empty">${tasks.length?"해당하는 할 일이 없어요.":"아직 할 일이 없어요.<br>위에서 첫 할 일을 추가해 보세요 ✨"}</div>`;
+  const cm=common(free),np=[...new Set(free.map(f=>f.owner))].length;
+  const top=[...cm].sort((a,b)=>b.c-a.c||(b.e-b.s)-(a.e-a.s)||a.d-b.d).slice(0,5);
+  $("common").innerHTML=np<2?'<div class="empty" style="padding:8px 0">2명 이상 공강을 등록하면 겹치는 시간을 추천해 드려요</div>'
+    :top.length?`<div class="pick">${top.map(x=>`<span class="pill">${DAYS[x.d]} ${hm(x.s)}–${hm(x.e)} · ${x.c}/${np}명${x.c===np?" ✨":""}</span>`).join("")}</div>`
+    :'<div class="empty" style="padding:8px 0">30분 이상 겹치는 시간이 아직 없어요</div>';
+  const days=DAYS.map((n,d)=>({n,d,a:free.filter(f=>f.day===d).sort((x,y)=>mm(x.s)-mm(y.s))})).filter(x=>x.a.length);
+  $("flist").innerHTML=days.length?days.map(({n,d,a})=>`<div class="day ${d===td?"today":""}"><div class="dn">${n}</div><div class="slots">${a.map(f=>`<div class="slot ${f.type}"><b>${f.s}–${f.e}</b>${esc(f.owner)} · ${TY[f.type][0]} ${TY[f.type][1]}${f.place?` · 📍${esc(f.place)}`:""}<span class="x"><button onclick="fEditStart('${f.id}')" title="수정">✏️</button><button onclick="fDel('${f.id}')" title="삭제">🗑️</button></span></div>`).join("")}</div></div>`).join("")
+    :'<div class="empty">등록된 공강이 없어요.<br>위에서 공강 시간과 활동을 추가해 보세요 🕒</div>';
+  const tm={study:0,meal:0,rest:0};free.forEach(f=>tm[f.type]+=mm(f.e)-mm(f.s));const mx=Math.max(1,...Object.values(tm));
+  $("acts").innerHTML=free.length?Object.keys(TY).map(k=>`<div class="bar"><span>${TY[k][0]} ${TY[k][1]}</span><div class="track"><div class="fill" style="width:${tm[k]/mx*100}%"></div></div><span>${tm[k]?dur(tm[k]):"-"}</span></div>`).join(""):"";
+}
 
-  function render() {
-    $("list").innerHTML = "";
-    items.forEach((it, i) => {
-      const li = document.createElement("li");
-      li.innerHTML = `<span>${it.s} ~ ${it.e} · <b>${it.type}</b></span>`;
-      const del = document.createElement("button");
-      del.textContent = "삭제";
-      del.onclick = () => { items.splice(i, 1); save(); render(); };
-      li.appendChild(del);
-      $("list").appendChild(li);
-    });
-  }
-  render();
+/* 백업 */
+$("exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({tasks,free},null,2)],{type:"application/json"}));a.download="teamboard-backup.json";a.click()};
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{
+  const o=JSON.parse(r.result),t=Array.isArray(o)?o:o.tasks;if(!Array.isArray(t))throw 0;
+  if(confirm("백업을 불러올까요? 현재 데이터는 대체됩니다.")){tasks=t.map(x=>({status:"todo",id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...x}));if(Array.isArray(o.free))free=o.free;sv();render()}}catch(x){alert("올바른 백업 파일이 아니에요.")}};r.readAsText(f);e.target.value=""};
+render();
 </script>
 </body>
 </html>
