@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>국민대 팀플 보드</title>
+<meta name="description" content="국민대학교 팀플 관리 보드 - 할 일, 공강, 팀원, 메모를 한 곳에서">
 <style>
 /* ── 토큰 ── */
 :root{
@@ -108,6 +109,8 @@ a{color:var(--brand);text-decoration:none}
 .stat-card .stat-val{font-size:2rem;font-weight:800;line-height:1}
 .stat-card .stat-label{font-size:.78rem;color:var(--sub)}
 .stat-card .stat-icon{font-size:1.4rem;margin-bottom:4px}
+.stat-card{transition:transform .15s,box-shadow .15s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
 
 .prog-card{background:var(--surface);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--sh);border:1px solid var(--line)}
 .prog-head{display:flex;justify-content:space-between;font-weight:700;font-size:.9rem;margin-bottom:10px}
@@ -242,8 +245,24 @@ textarea.inp{resize:vertical;min-height:80px}
 /* ── 막대 차트 ── */
 .bar-row{display:grid;grid-template-columns:80px 1fr 60px;gap:8px;align-items:center;font-size:.8rem;margin:6px 0}
 
-/* ── 빈 상태 ── */
-.empty{text-align:center;color:var(--sub);padding:28px 0;font-size:.9rem}
+/* ── 진행률 바 (팀원 카드) ── */
+.mem-progress{width:100%;margin-top:4px}
+.mem-track{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.mem-fill{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.mem-pct{font-size:.7rem;color:var(--sub);text-align:right;margin-top:2px}
+
+/* ── 캘린더 모바일 ── */
+@media(max-width:600px){
+  .cal-grid{overflow-x:auto}
+  .cal-cell{min-height:48px;font-size:.7rem}
+}
+
+/* ── D-Day 강조 ── */
+.chip-dday{background:rgba(229,72,77,.22);color:var(--red);border-color:transparent;font-weight:800;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+
+/* ── 날짜 배지 ── */
+.topbar-date{font-size:.75rem;color:var(--sub);white-space:nowrap}
 
 /* ── 토스트 ── */
 #toast{
@@ -350,6 +369,7 @@ textarea.inp{resize:vertical;min-height:80px}
         대시보드<small id="topbar-sub">오늘도 화이팅!</small>
       </div>
       <div class="topbar-actions">
+        <span class="topbar-date" id="topbar-date"></span>
         <button class="icon-btn" title="백업 내보내기" id="exp">💾</button>
         <button class="icon-btn" title="백업 불러오기" id="imp">📂</button>
         <input type="file" id="file" accept=".json" hidden>
@@ -628,11 +648,30 @@ const PAGES={
   settings:{title:"설정 & 백업",sub:"데이터 관리 및 초기화"},
 };
 
+/* 시간대별 인사말 */
+function getGreeting(){
+  const h=new Date().getHours();
+  if(h<6)return"🌙 야밤에도 팀플 파이팅!";
+  if(h<12)return"☀️ 좋은 아침이에요!";
+  if(h<18)return"🌤 좋은 오후예요!";
+  return"🌆 저녁에도 화이팅!";
+}
+
+/* 상단바 날짜 */
+function updateTopbarDate(){
+  const now=new Date();
+  const weekdays=["일","월","화","수","목","금","토"];
+  const el=$("topbar-date");
+  if(el)el.textContent=`${now.getMonth()+1}월 ${now.getDate()}일 (${weekdays[now.getDay()]})`;
+}
+updateTopbarDate();
+
 function navigate(page){
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
   document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));
+  const sub=page==="dash"?getGreeting():PAGES[page].sub;
   $("topbar-title").childNodes[0].textContent=PAGES[page].title;
-  $("topbar-sub").textContent=PAGES[page].sub;
+  $("topbar-sub").textContent=sub;
   if(page==="calendar")renderCalendar();
   if(page==="settings")renderSettings();
   // 모바일: 사이드바 닫기
@@ -709,7 +748,7 @@ const dBadge=t=>{
   if(t.status==="done")return`<span class="chip chip-green">완료</span>`;
   const d=dday(t.due);
   return d<0?`<span class="chip chip-red">D+${-d} 지남</span>`
-    :d===0?`<span class="chip chip-red">D-Day</span>`
+    :d===0?`<span class="chip chip-dday">🔥 D-Day</span>`
     :d<=3?`<span class="chip chip-amber">D-${d}</span>`
     :`<span class="chip chip-blue">D-${d}</span>`;
 };
@@ -990,6 +1029,7 @@ function render(){
     const tdone=ta.filter(t=>t.status==="done").length;
     const fa=free.filter(f=>f.owner===n);
     const em=extraMembers.find(m=>m.name===n);
+    const pct=ta.length?Math.round(tdone/ta.length*100):0;
     return`<div class="member-card">
       ${av(n,"lg")}
       <div class="mem-name">${esc(n)}</div>
@@ -998,6 +1038,7 @@ function render(){
         <span class="chip chip-blue">✅ ${tdone}/${ta.length}</span>
         <span class="chip chip-green">🕒 ${fa.length}개</span>
       </div>
+      ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
     </div>`;
   }).join("");
   $("dash-team").innerHTML=memberHTML||`<div class="empty" style="padding:8px">아직 등록된 팀원이 없어요</div>`;
@@ -1008,6 +1049,7 @@ function render(){
     const tdone=ta.filter(t=>t.status==="done").length;
     const fa=free.filter(f=>f.owner===n);
     const em=extraMembers.find(m=>m.name===n);
+    const pct=ta.length?Math.round(tdone/ta.length*100):0;
     return`<div class="member-card">
       ${av(n,"lg")}
       <div class="mem-name">${esc(n)}</div>
@@ -1016,6 +1058,7 @@ function render(){
         <span class="chip chip-blue">📋 ${tdone}/${ta.length} 완료</span>
         <span class="chip chip-green">🕒 공강 ${fa.length}개</span>
       </div>
+      ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
       ${em?`<button class="btn btn-ghost btn-sm" onclick="memDel('${esc(n)}')">삭제</button>`:""}
     </div>`;
   }).join("")||`<div class="empty">아직 팀원이 없어요.<br>할 일이나 공강을 추가하면 자동으로 등록돼요 👥</div>`;
@@ -1076,6 +1119,8 @@ function render(){
 }
 
 render();
+// 초기 대시보드 인사말 적용
+$("topbar-sub").textContent=getGreeting();
 </script>
 </body>
 </html>
