@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>팩맨</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif;color:#fff}
+h1{font-size:2rem;color:#FFD700;letter-spacing:.1em;margin-bottom:8px;text-shadow:0 0 20px #FFD700}
+#hud{display:flex;gap:32px;margin-bottom:12px;font-size:1rem;color:#fff}
+#hud span{color:#FFD700;font-weight:700}
+canvas{border:2px solid #1a1aff;border-radius:4px;display:block;box-shadow:0 0 30px rgba(26,26,255,.5)}
+#msg{margin-top:16px;font-size:1.1rem;color:#FFD700;min-height:28px;text-align:center}
+#restart{display:none;margin-top:12px;padding:10px 28px;background:#FFD700;color:#000;border:none;border-radius:8px;font-size:1rem;font-weight:800;cursor:pointer;transition:opacity .15s}
+#restart:hover{opacity:.8}
+#controls{margin-top:16px;font-size:.8rem;color:#888;text-align:center}
+</style>
+</head>
+<body>
+<h1>👾 PAC-MAN</h1>
+<div id="hud">점수: <span id="score">0</span> &nbsp; 레벨: <span id="level">1</span> &nbsp; 목숨: <span id="lives">❤️❤️❤️</span></div>
+<canvas id="c"></canvas>
+<div id="msg">방향키 또는 WASD로 조작하세요</div>
+<button id="restart">다시 시작</button>
+<div id="controls">방향키 / WASD · 모바일: 화면 스와이프</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const CELL = 20;
+
+// 맵 정의 (0=빈공간+점, 1=벽, 2=큰점, 3=빈공간)
+const MAP_TEMPLATE = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,2,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,2,1],
+  [1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,0,1],
+  [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+  [1,1,1,1,0,1,1,1,3,3,1,3,3,1,1,1,0,1,1,1,1],
+  [1,1,1,1,0,1,3,3,3,3,3,3,3,3,1,3,0,1,1,1,1],
+  [1,1,1,1,0,1,3,1,1,1,3,1,1,1,3,1,0,1,1,1,1],
+  [3,3,3,3,0,3,3,1,3,3,3,3,3,1,3,3,0,3,3,3,3],
+  [1,1,1,1,0,1,3,1,1,1,1,1,1,1,3,1,0,1,1,1,1],
+  [1,1,1,1,0,1,3,3,3,3,3,3,3,3,3,3,0,1,1,1,1],
+  [1,1,1,1,0,1,3,1,1,1,1,1,1,1,3,1,0,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1],
+  [1,2,0,1,0,0,0,0,0,0,3,0,0,0,0,0,0,1,0,2,1],
+  [1,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,0,1,1],
+  [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+  [1,0,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+const ROWS = MAP_TEMPLATE.length;
+const COLS = MAP_TEMPLATE[0].length;
+canvas.width  = COLS * CELL;
+canvas.height = ROWS * CELL;
+
+let map, dots, score, lives, level, gameOver, won, powered, powerTimer;
+let pacman, ghosts, animFrame;
+
+const GHOST_COLORS = ['#FF0000','#FFB8FF','#00FFFF','#FFB852'];
+const GHOST_NAMES  = ['Blinky','Pinky','Inky','Clyde'];
+
+function initGame() {
+  map = MAP_TEMPLATE.map(r => [...r]);
+  dots = 0;
+  map.forEach(r => r.forEach(c => { if(c===0||c===2) dots++ }));
+  score = 0;
+  lives = 3;
+  level = 1;
+  gameOver = false;
+  won = false;
+  powered = false;
+  powerTimer = 0;
+  document.getElementById('msg').textContent = '방향키 또는 WASD로 조작하세요';
+  document.getElementById('restart').style.display = 'none';
+  initEntities();
+}
+
+function initEntities() {
+  pacman = { x:10, y:16, dx:0, dy:0, nextDx:0, nextDy:0, mouth:0.25, mouthDir:1 };
+  ghosts = GHOST_COLORS.map((col,i) => ({
+    x: 8+i%4, y: 9+Math.floor(i/4),
+    dx:1, dy:0,
+    color: col,
+    scared: false,
+    eaten: false,
+    homeX: 8+i, homeY: 9,
+    speed: 1,
+  }));
+}
+
+const isWall = (x,y) => {
+  if(y<0||y>=ROWS||x<0||x>=COLS) return true;
+  return map[y][x] === 1;
+};
+
+// 터널 처리
+const wrap = (x,y) => {
+  if(x<0) return {x:COLS-1,y};
+  if(x>=COLS) return {x:0,y};
+  return {x,y};
+};
+
+function movePacman() {
+  // 다음 방향으로 전환 가능한지 확인
+  const nx = pacman.x + pacman.nextDx;
+  const ny = pacman.y + pacman.nextDy;
+  if(!isWall(nx,ny)) { pacman.dx=pacman.nextDx; pacman.dy=pacman.nextDy; }
+
+  const mx = pacman.x + pacman.dx;
+  const my = pacman.y + pacman.dy;
+  const w = wrap(mx,my);
+  if(!isWall(w.x,w.y)) { pacman.x=w.x; pacman.y=w.y; }
+
+  // 점 먹기
+  const cell = map[pacman.y][pacman.x];
+  if(cell===0) { map[pacman.y][pacman.x]=3; score+=10; dots--; document.getElementById('score').textContent=score; }
+  if(cell===2) {
+    map[pacman.y][pacman.x]=3; score+=50; dots--;
+    document.getElementById('score').textContent=score;
+    powered=true; powerTimer=200;
+    ghosts.forEach(g=>{ g.scared=true; g.eaten=false; });
+  }
+
+  // 입 애니메이션
+  pacman.mouth += 0.15 * pacman.mouthDir;
+  if(pacman.mouth>=0.45||pacman.mouth<=0.02) pacman.mouthDir*=-1;
+}
+
+function moveGhost(g) {
+  const speed = powered && g.scared ? 0.7 : (level===1?1:1.3);
+  const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+  // 현재 방향의 반대는 제외 (막힌 경우만 허용)
+  const reverse = {dx:-g.dx,dy:-g.dy};
+  const options = dirs.filter(d=>{
+    if(d.dx===reverse.dx&&d.dy===reverse.dy) return false;
+    const nx=g.x+d.dx, ny=g.y+d.dy;
+    return !isWall(nx,ny);
+  });
+  if(options.length===0) options.push(reverse);
+
+  // 겁먹은 유령: 랜덤, 아닌 경우: 팩맨 추적
+  let chosen;
+  if(g.scared) {
+    chosen = options[Math.floor(Math.random()*options.length)];
+  } else {
+    // 팩맨 방향으로 가중치
+    chosen = options.reduce((best,d) => {
+      const nx=g.x+d.dx, ny=g.y+d.dy;
+      const dist=Math.abs(nx-pacman.x)+Math.abs(ny-pacman.y);
+      const bdist=Math.abs(g.x+best.dx-pacman.x)+Math.abs(g.y+best.dy-pacman.y);
+      return dist<bdist?d:best;
+    });
+  }
+  g.dx=chosen.dx; g.dy=chosen.dy;
+  const w=wrap(g.x+g.dx, g.y+g.dy);
+  g.x=w.x; g.y=w.y;
+}
+
+function checkCollision() {
+  ghosts.forEach(g => {
+    if(g.x===pacman.x && g.y===pacman.y) {
+      if(powered && g.scared && !g.eaten) {
+        g.scared=false; g.eaten=true;
+        g.x=g.homeX; g.y=g.homeY;
+        score+=200; document.getElementById('score').textContent=score;
+      } else if(!g.eaten) {
+        lives--;
+        updateLives();
+        if(lives<=0) { gameOver=true; return; }
+        initEntities();
+      }
+    }
+  });
+}
+
+function updateLives() {
+  const arr=['','❤️','❤️❤️','❤️❤️❤️'];
+  document.getElementById('lives').textContent = arr[Math.max(0,lives)];
+}
+
+// 입력
+document.addEventListener('keydown', e => {
+  const map2 = {
+    ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1],
+    a:[-1,0], d:[1,0], w:[0,-1], s:[0,1],
+    A:[-1,0], D:[1,0], W:[0,-1], S:[0,1],
+  };
+  const v = map2[e.key];
+  if(v) { pacman.nextDx=v[0]; pacman.nextDy=v[1]; e.preventDefault(); }
+});
+
+// 모바일 스와이프
+let touchX=0, touchY=0;
+canvas.addEventListener('touchstart', e=>{ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; e.preventDefault(); },{passive:false});
+canvas.addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX-touchX;
+  const dy=e.changedTouches[0].clientY-touchY;
+  if(Math.abs(dx)>Math.abs(dy)) { pacman.nextDx=dx>0?1:-1; pacman.nextDy=0; }
+  else { pacman.nextDx=0; pacman.nextDy=dy>0?1:-1; }
+  e.preventDefault();
+},{passive:false});
+
+// 그리기
+function drawMaze() {
+  for(let y=0;y<ROWS;y++) {
+    for(let x=0;x<COLS;x++) {
+      const cx=x*CELL, cy=y*CELL;
+      const cell=map[y][x];
+      if(cell===1) {
+        ctx.fillStyle='#1a1aff';
+        ctx.fillRect(cx,cy,CELL,CELL);
+        ctx.strokeStyle='#0000aa';
+        ctx.strokeRect(cx+1,cy+1,CELL-2,CELL-2);
+      } else {
+        ctx.fillStyle='#000';
+        ctx.fillRect(cx,cy,CELL,CELL);
+        if(cell===0) {
+          ctx.beginPath();
+          ctx.arc(cx+CELL/2, cy+CELL/2, 2, 0, Math.PI*2);
+          ctx.fillStyle='#FFD700';
+          ctx.fill();
+        } else if(cell===2) {
+          ctx.beginPath();
+          ctx.arc(cx+CELL/2, cy+CELL/2, 5, 0, Math.PI*2);
+          ctx.fillStyle='#FFD700';
+          ctx.fill();
+        }
+      }
+    }
+  }
+}
+
+function drawPacman() {
+  const cx = pacman.x*CELL+CELL/2;
+  const cy = pacman.y*CELL+CELL/2;
+  let angle = 0;
+  if(pacman.dx===1) angle=0;
+  else if(pacman.dx===-1) angle=Math.PI;
+  else if(pacman.dy===-1) angle=-Math.PI/2;
+  else if(pacman.dy===1) angle=Math.PI/2;
+
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,CELL/2-1, angle+pacman.mouth*Math.PI, angle+(2-pacman.mouth)*Math.PI);
+  ctx.closePath();
+  ctx.fillStyle='#FFD700';
+  ctx.fill();
+
+  // 눈
+  const eyeX = cx + Math.cos(angle-0.5)*4;
+  const eyeY = cy + Math.sin(angle-0.5)*4;
+  ctx.beginPath();
+  ctx.arc(eyeX,eyeY,1.5,0,Math.PI*2);
+  ctx.fillStyle='#000';
+  ctx.fill();
+}
+
+function drawGhost(g) {
+  const cx=g.x*CELL, cy=g.y*CELL;
+  const r=CELL/2-1;
+  const mx=cx+CELL/2, my=cy+CELL/2;
+  const color = g.eaten ? '#333' : (g.scared ? (powerTimer<60&&Math.floor(powerTimer/8)%2===0?'#fff':'#0000ff') : g.color);
+
+  ctx.beginPath();
+  ctx.arc(mx, cy+r+1, r, Math.PI, 0);
+  ctx.lineTo(mx+r, cy+CELL);
+  // 물결 하단
+  const waves=3;
+  for(let i=0;i<waves;i++) {
+    const wx1=mx+r-((i+0.5)/waves)*CELL*2/waves*waves;
+    ctx.quadraticCurveTo(
+      mx+r-(i/waves*CELL*2/waves*waves)-CELL/(waves*2), cy+CELL-3,
+      mx+r-((i+1)/waves)*(CELL*2/waves*waves), cy+CELL
+    );
+  }
+  ctx.lineTo(mx-r, cy+CELL);
+  ctx.closePath();
+  ctx.fillStyle=color;
+  ctx.fill();
+
+  if(!g.eaten) {
+    // 눈 흰자
+    [-0.3,0.3].forEach(ox=>{
+      ctx.beginPath();
+      ctx.arc(mx+ox*r*1.5, my-2, 3, 0, Math.PI*2);
+      ctx.fillStyle='#fff';
+      ctx.fill();
+      // 눈동자
+      ctx.beginPath();
+      ctx.arc(mx+ox*r*1.5+g.dx, my-2+g.dy, 1.5, 0, Math.PI*2);
+      ctx.fillStyle=g.scared?'#fff':'#00f';
+      ctx.fill();
+    });
+  }
+}
+
+let tick=0;
+function loop() {
+  animFrame = requestAnimationFrame(loop);
+  tick++;
+
+  if(!gameOver && !won) {
+    if(tick%4===0) {
+      movePacman();
+      if(powered) { powerTimer--; if(powerTimer<=0){ powered=false; ghosts.forEach(g=>{ g.scared=false; }); } }
+    }
+    if(tick%5===0) ghosts.forEach(g=>moveGhost(g));
+    checkCollision();
+    if(dots<=0) { won=true; }
+  }
+
+  // 렌더
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawMaze();
+  drawPacman();
+  ghosts.forEach(g=>drawGhost(g));
+
+  if(gameOver) {
+    ctx.fillStyle='rgba(0,0,0,.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#FF0000';
+    ctx.font='bold 28px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
+    document.getElementById('msg').textContent='아쉽네요! 다시 도전해보세요 👾';
+    document.getElementById('restart').style.display='inline-block';
+    cancelAnimationFrame(animFrame);
+  }
+  if(won) {
+    ctx.fillStyle='rgba(0,0,0,.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#FFD700';
+    ctx.font='bold 26px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('🎉 YOU WIN!', canvas.width/2, canvas.height/2);
+    document.getElementById('msg').textContent=`점수: ${score} · 클리어 축하해요! 🎉`;
+    document.getElementById('restart').style.display='inline-block';
+    cancelAnimationFrame(animFrame);
+  }
+
+  document.getElementById('score').textContent=score;
+  document.getElementById('level').textContent=level;
+}
+
+document.getElementById('restart').onclick=()=>{
+  if(animFrame) cancelAnimationFrame(animFrame);
+  initGame();
+  tick=0;
+  loop();
+};
+
+initGame();
+loop();
+</script>
+</body>
+</html>
