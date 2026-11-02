@@ -303,6 +303,20 @@ textarea.inp{resize:vertical;min-height:80px}
 @media(max-width:700px){.hamburger{display:block}}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
 .sidebar-overlay.open{display:block}
+
+/* ── 방명록 ── */
+.gb-form{display:grid;gap:10px;margin-bottom:0}
+.gb-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.gb-item{
+  background:var(--surface2);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:6px;
+}
+.gb-meta{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sub)}
+.gb-name{font-weight:700;color:var(--text);font-size:.95rem}
+.gb-msg{font-size:.92rem;line-height:1.65;white-space:pre-wrap}
+.gb-empty{text-align:center;padding:40px 0;color:var(--sub);font-size:.9rem}
+.gb-loading{text-align:center;padding:24px 0;color:var(--sub);font-size:.85rem}
+.char-count{font-size:.75rem;color:var(--sub);text-align:right}
 </style>
 </head>
 <body>
@@ -341,6 +355,9 @@ textarea.inp{resize:vertical;min-height:80px}
       <button class="nav-item" data-page="notes">
         <span class="nav-icon">📝</span>메모
         <span class="badge" id="badge-notes">0</span>
+      </button>
+      <button class="nav-item" data-page="guestbook">
+        <span class="nav-icon">💬</span>방명록
       </button>
       <button class="nav-item" data-page="settings">
         <span class="nav-icon">⚙️</span>설정 &amp; 백업
@@ -538,6 +555,28 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
     </section>
 
+    <!-- ─────────── 방명록 ─────────── -->
+    <section class="page" id="page-guestbook">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><span class="ct-icon">✏️</span>방명록 남기기</div>
+        <div class="gb-form" id="gb-form">
+          <div class="form-row">
+            <input class="inp" id="gb-name" maxlength="20" placeholder="이름" style="flex:1" required>
+            <input class="inp" id="gb-password" type="password" maxlength="20" placeholder="비밀번호 (삭제 시 필요)" style="flex:1" required>
+          </div>
+          <textarea class="inp inp-full" id="gb-msg" maxlength="300" placeholder="방명록을 남겨주세요 😊" rows="3" required></textarea>
+          <div class="char-count"><span id="gb-count">0</span>/300</div>
+          <div class="form-row">
+            <button class="btn" id="gb-submit">남기기</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ct-icon">💬</span>방명록 <span id="gb-total" style="font-size:.8rem;color:var(--sub);font-weight:500"></span></div>
+        <div id="gb-list"><div class="gb-loading">불러오는 중...</div></div>
+      </div>
+    </section>
+
     <!-- ─────────── 설정 ─────────── -->
     <section class="page" id="page-settings">
       <div class="two-col">
@@ -645,6 +684,7 @@ const PAGES={
   team:{title:"팀원 현황",sub:"역할과 기여도 한눈에"},
   free:{title:"공강 타임",sub:"팀 모임 최적 시간 찾기"},
   notes:{title:"메모",sub:"아이디어와 결정 사항 기록"},
+  guestbook:{title:"방명록",sub:"방문자들의 한 마디 💬"},
   settings:{title:"설정 & 백업",sub:"데이터 관리 및 초기화"},
 };
 
@@ -674,6 +714,7 @@ function navigate(page){
   $("topbar-sub").textContent=sub;
   if(page==="calendar")renderCalendar();
   if(page==="settings")renderSettings();
+  if(page==="guestbook")gbLoad();
   // 모바일: 사이드바 닫기
   $("sidebar").classList.remove("open");
   $("sidebar-overlay").classList.remove("open");
@@ -1121,6 +1162,131 @@ function render(){
 render();
 // 초기 대시보드 인사말 적용
 $("topbar-sub").textContent=getGreeting();
+</script>
+
+<!-- ─────────── Supabase SDK ─────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════
+   방명록 — Supabase 연동
+   ⚠️ 아래 두 값을 본인 Supabase 프로젝트 값으로 교체하세요
+   ═══════════════════════════════════════ */
+const SUPABASE_URL  = "https://yryoeohwyxoemqcvqlov.supabase.co";
+const SUPABASE_ANON = "sb_publishable_aX6VGBoFVb2mNMQXxe0kkA_Maf6xN4L";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* 글자 수 카운터 */
+$("gb-msg").addEventListener("input", () => {
+  $("gb-count").textContent = $("gb-msg").value.length;
+});
+
+/* 날짜 포맷 */
+function gbFmt(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("ko", {month:"short",day:"numeric"})
+    + " " + d.toLocaleTimeString("ko", {hour:"2-digit",minute:"2-digit"});
+}
+
+/* 비밀번호 해시 (SHA-256, 브라우저 내장) */
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* 목록 불러오기 */
+async function gbLoad() {
+  $("gb-list").innerHTML = '<div class="gb-loading">불러오는 중...</div>';
+  const { data, error, count } = await sb
+    .from("guestbook")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    $("gb-list").innerHTML = `<div class="gb-empty">⚠️ 불러오기 실패: ${esc(error.message)}</div>`;
+    return;
+  }
+
+  $("gb-total").textContent = count ? `(${count}개)` : "";
+
+  if (!data.length) {
+    $("gb-list").innerHTML = '<div class="gb-empty">아직 방명록이 없어요.<br>첫 번째로 남겨보세요 ✨</div>';
+    return;
+  }
+
+  $("gb-list").innerHTML = data.map(r => `
+    <div class="gb-item" id="gbr-${r.id}">
+      <div class="gb-meta">
+        <i class="av av-sm" style="background:${color(r.name)}">${esc(r.name[0])}</i>
+        <span class="gb-name">${esc(r.name)}</span>
+        <span style="margin-left:auto">${gbFmt(r.created_at)}</span>
+        <button class="btn btn-ghost btn-sm" onclick="gbDel(${r.id},'${esc(r.name)}')">🗑</button>
+      </div>
+      <div class="gb-msg">${esc(r.message)}</div>
+    </div>`).join("");
+}
+
+/* 글 작성 */
+$("gb-submit").addEventListener("click", async () => {
+  const name    = $("gb-name").value.trim();
+  const pw      = $("gb-password").value;
+  const message = $("gb-msg").value.trim();
+
+  if (!name)    { toast("이름을 입력해주세요"); return; }
+  if (!pw)      { toast("비밀번호를 입력해주세요"); return; }
+  if (!message) { toast("내용을 입력해주세요"); return; }
+
+  $("gb-submit").disabled = true;
+  $("gb-submit").textContent = "저장 중...";
+
+  const pw_hash = await hashPw(pw);
+
+  const { error } = await sb
+    .from("guestbook")
+    .insert({ name, message, pw_hash });
+
+  $("gb-submit").disabled = false;
+  $("gb-submit").textContent = "남기기";
+
+  if (error) {
+    toast("저장 실패: " + error.message);
+    return;
+  }
+
+  $("gb-name").value = "";
+  $("gb-password").value = "";
+  $("gb-msg").value = "";
+  $("gb-count").textContent = "0";
+  toast("방명록에 남겼어요 💬");
+  gbLoad();
+});
+
+/* 글 삭제 */
+async function gbDel(id, name) {
+  const pw = prompt(`"${name}"의 방명록을 삭제하려면\n비밀번호를 입력하세요:`);
+  if (pw === null) return;
+
+  const pw_hash = await hashPw(pw);
+
+  /* 비밀번호 일치 여부 확인 */
+  const { data, error: fetchErr } = await sb
+    .from("guestbook")
+    .select("pw_hash")
+    .eq("id", id)
+    .single();
+
+  if (fetchErr || !data) { toast("삭제 실패: 글을 찾을 수 없어요"); return; }
+  if (data.pw_hash !== pw_hash) { toast("비밀번호가 틀렸어요"); return; }
+
+  const { error } = await sb.from("guestbook").delete().eq("id", id);
+  if (error) { toast("삭제 실패: " + error.message); return; }
+
+  toast("삭제했어요");
+  const el = document.getElementById("gbr-" + id);
+  if (el) el.remove();
+  gbLoad();
+}
 </script>
 </body>
 </html>
