@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>국민대 불편사항 접수</title>
-<meta name="description" content="국민대학교 학생들의 불편사항을 접수하고 공유하는 플랫폼">
+<title>국민대 라이프</title>
+<meta name="description" content="국민대학교 학생을 위한 캠퍼스 종합 플랫폼 - 불편사항, 팀플 관리, 메모, 방명록">
 <style>
 /* ── 토큰 ── */
 :root{
@@ -370,11 +370,11 @@ textarea.inp{resize:vertical;min-height:80px}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">🏫</div>
-      <div class="logo-text">국민대 불편함<small>접수 플랫폼 v1.0</small></div>
+      <div class="logo-text">국민대 라이프<small>캠퍼스 종합 플랫폼</small></div>
     </div>
 
     <nav class="nav-list">
-      <div class="nav-section">불편사항</div>
+      <div class="nav-section">메인</div>
       <button class="nav-item active" data-page="dash">
         <span class="nav-icon">🏠</span>홈
       </button>
@@ -385,11 +385,8 @@ textarea.inp{resize:vertical;min-height:80px}
 
       <div class="nav-section">팀플 도구</div>
       <button class="nav-item" data-page="tasks">
-        <span class="nav-icon">✅</span>할 일
+        <span class="nav-icon">📅</span>할 일 &amp; 캘린더
         <span class="badge" id="badge-tasks">0</span>
-      </button>
-      <button class="nav-item" data-page="calendar">
-        <span class="nav-icon">📅</span>캘린더
       </button>
       <button class="nav-item" data-page="team">
         <span class="nav-icon">👥</span>팀원 현황
@@ -444,13 +441,13 @@ textarea.inp{resize:vertical;min-height:80px}
     <!-- ─────────── 홈 대시보드 ─────────── -->
     <section class="page active" id="page-dash">
       <div class="hero-banner">
-        <h1>국민대 불편함 접수 플랫폼</h1>
-        <p>학교생활에서 불편한 점을 제보하고, 같은 불편함을 겪은 사람들과 공감을 나눠요.<br>여러분의 한 마디가 더 나은 국민대를 만들어요 💪</p>
+        <h1>국민대 라이프 🏫</h1>
+        <p>국민대 학생을 위한 캠퍼스 종합 플랫폼이에요.<br>불편사항 제보부터 팀플 관리, 메모, 방명록까지 한 곳에서 💪</p>
       </div>
       <div class="dash-grid">
         <div class="stat-row">
-          <div class="stat-card"><div class="stat-icon">�</div><div class="stat-val" id="cp-s1">0</div><div class="stat-label">전체 불편사항</div></div>
-          <div class="stat-card"><div class="stat-icon">�</div><div class="stat-val" id="cp-s2">0</div><div class="stat-label">미해결</div></div>
+          <div class="stat-card"><div class="stat-icon">📢</div><div class="stat-val" id="cp-s1">0</div><div class="stat-label">전체 불편사항</div></div>
+          <div class="stat-card"><div class="stat-icon">🔴</div><div class="stat-val" id="cp-s2">0</div><div class="stat-label">미해결</div></div>
           <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="cp-s3">0</div><div class="stat-label">해결됨</div></div>
           <div class="stat-card"><div class="stat-icon">❤️</div><div class="stat-val" id="cp-s4">0</div><div class="stat-label">총 공감 수</div></div>
         </div>
@@ -515,7 +512,7 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
     </section>
 
-    <!-- ─────────── 할 일 ─────────── -->
+    <!-- ─────────── 할 일 & 캘린더 ─────────── -->
     <section class="page" id="page-tasks">
       <div class="card" style="margin-bottom:14px">
         <div class="card-title"><span class="ct-icon">➕</span><span id="task-form-title">새 할 일 추가</span></div>
@@ -538,22 +535,29 @@ textarea.inp{resize:vertical;min-height:80px}
         </form>
       </div>
 
-      <div class="card">
-        <div class="card-title"><span class="ct-icon">✅</span>할 일 목록</div>
-        <div class="chips" id="fchips"></div>
-        <div id="tlist"></div>
-      </div>
-    </section>
-
-    <!-- ─────────── 캘린더 ─────────── -->
-    <section class="page" id="page-calendar">
-      <div class="card">
-        <div class="cal-header">
-          <button class="btn btn-ghost btn-sm" id="cal-prev">‹</button>
-          <div style="font-weight:800;font-size:1.1rem" id="cal-label"></div>
-          <button class="btn btn-ghost btn-sm" id="cal-next">›</button>
+      <div class="two-col">
+        <!-- 할 일 목록 -->
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">✅</span>할 일 목록</div>
+          <div class="chips" id="fchips"></div>
+          <div id="tlist"></div>
         </div>
-        <div class="cal-grid" id="cal-grid"></div>
+
+        <!-- 캘린더 -->
+        <div class="card">
+          <div class="cal-header">
+            <div class="card-title" style="margin:0"><span class="ct-icon">📅</span>마감일 캘린더</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-ghost btn-sm" id="cal-prev">‹</button>
+              <div style="font-weight:800;font-size:.95rem;min-width:100px;text-align:center" id="cal-label"></div>
+              <button class="btn btn-ghost btn-sm" id="cal-next">›</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div style="margin-top:12px;font-size:.78rem;color:var(--sub);display:flex;gap:12px;flex-wrap:wrap">
+            <span>🟪 예정</span><span>🟩 완료</span><span>🟥 기한 초과</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -767,10 +771,9 @@ applyTheme();
 
 /* ───────────── 네비게이션 ───────────── */
 const PAGES={
-  dash:{title:"홈",sub:"국민대 불편함 접수 플랫폼 🏫"},
-  complaints:{title:"불편사항 접수",sub:"불편함을 공유하고 공감해요 �"},
-  tasks:{title:"할 일",sub:"팀 과제와 역할 관리"},
-  calendar:{title:"캘린더",sub:"마감일을 달력에서 확인"},
+  dash:{title:"홈",sub:"국민대 라이프 — 캠퍼스 종합 플랫폼 🏫"},
+  complaints:{title:"불편사항 접수",sub:"불편함을 공유하고 공감해요 📢"},
+  tasks:{title:"할 일 & 캘린더",sub:"과제와 마감일을 한눈에 📅"},
   team:{title:"팀원 현황",sub:"역할과 기여도 한눈에"},
   free:{title:"공강 타임",sub:"팀 모임 최적 시간 찾기"},
   notes:{title:"메모",sub:"아이디어와 결정 사항 기록"},
@@ -802,7 +805,7 @@ function navigate(page){
   const sub=page==="dash"?getGreeting():PAGES[page].sub;
   $("topbar-title").childNodes[0].textContent=PAGES[page].title;
   $("topbar-sub").textContent=sub;
-  if(page==="calendar")renderCalendar();
+  if(page==="tasks")renderCalendar();
   if(page==="settings")renderSettings();
   if(page==="guestbook")gbLoad();
   if(page==="complaints")cpLoad();
@@ -1249,6 +1252,9 @@ function render(){
 
   /* 메모 */
   renderNotes();
+
+  /* 캘린더 (할 일 변경 시 자동 반영) */
+  if(typeof renderCalendar==="function")renderCalendar();
 }
 
 render();
