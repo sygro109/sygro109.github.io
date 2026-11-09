@@ -1428,6 +1428,13 @@ async function cpDashLoad(){
 
 /* 첫 화면 로드 */
 cpDashLoad();
+
+/* ═══════════════════════════════════════
+   방명록 — Supabase 연동
+   ═══════════════════════════════════════ */
+
+/* 글자 수 카운터 */
+$("gb-msg").addEventListener("input", () => {
   $("gb-count").textContent = $("gb-msg").value.length;
 });
 
