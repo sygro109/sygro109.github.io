@@ -232,6 +232,7 @@ textarea.inp{resize:vertical;min-height:80px}
 }
 .cal-cell:hover{background:var(--brand-dim)}
 .cal-cell.today{border-color:var(--brand);background:var(--brand-dim)}
+.cal-cell.selected{border-color:var(--brand);border-width:2px;box-shadow:0 0 0 2px var(--brand-dim);background:var(--brand-dim)}
 .cal-cell.other-month{opacity:.38}
 .cal-cell .cal-day-num{font-weight:700;font-size:.82rem;margin-bottom:2px}
 .cal-event{
@@ -539,6 +540,7 @@ textarea.inp{resize:vertical;min-height:80px}
         <!-- 할 일 목록 -->
         <div class="card">
           <div class="card-title"><span class="ct-icon">✅</span>할 일 목록</div>
+          <div id="sel-date-bar" style="display:none"></div>
           <div class="chips" id="fchips"></div>
           <div id="tlist"></div>
         </div>
@@ -1008,6 +1010,7 @@ function renderNotes(){
 
 /* ───────────── 캘린더 ───────────── */
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+let selDate=""; // 선택한 날짜 (YYYY-MM-DD), 빈 문자열이면 전체
 
 function renderCalendar(){
   const first=new Date(calYear,calMonth,1).getDay();
@@ -1025,12 +1028,13 @@ function renderCalendar(){
   for(let d=1;d<=days;d++){
     const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
     const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const isSel=selDate===ds;
     const ev=tasks.filter(t=>t.due===ds);
     const evHtml=ev.map(t=>{
       const cls=t.status==="done"?"done":dday(t.due)<0?"overdue":"";
       return`<div class="cal-event ${cls}" title="${esc(t.title)}">${esc(t.title)}</div>`;
     }).join("");
-    html+=`<div class="cal-cell${isToday?" today":""}"><div class="cal-day-num">${d}</div>${evHtml}</div>`;
+    html+=`<div class="cal-cell${isToday?" today":""}${isSel?" selected":""}" data-date="${ds}"><div class="cal-day-num">${d}</div>${evHtml}</div>`;
   }
 
   const remain=(7-((pad+days)%7))%7;
@@ -1038,6 +1042,18 @@ function renderCalendar(){
 
   $("cal-grid").innerHTML=html;
 }
+
+/* 캘린더 날짜 클릭 → 해당 날짜의 할 일만 필터 */
+$("cal-grid").onclick=e=>{
+  const cell=e.target.closest(".cal-cell[data-date]");
+  if(!cell)return;
+  const ds=cell.dataset.date;
+  selDate = (selDate===ds) ? "" : ds; // 같은 날 다시 누르면 해제
+  render();
+};
+
+/* 선택 날짜 해제 */
+function clearSelDate(){ selDate=""; render(); }
 
 $("cal-prev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()};
 $("cal-next").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()};
@@ -1201,7 +1217,22 @@ function render(){
 
   /* 할 일 목록 */
   document.querySelectorAll("#fchips button").forEach(b=>b.classList.toggle("on",b.dataset.f===fil));
-  const rows=tasks.filter(t=>!fil||t.status===fil).sort((a,b)=>(a.status==="done")-(b.status==="done")||a.due.localeCompare(b.due));
+  /* 선택 날짜 안내 바 */
+  const sb_=$("sel-date-bar");
+  if(selDate){
+    sb_.style.display="";
+    sb_.innerHTML=`<div style="display:flex;align-items:center;gap:8px;background:var(--brand-dim);color:var(--brand);padding:8px 12px;border-radius:10px;font-size:.84rem;font-weight:700;margin-bottom:12px">
+      📅 ${fmt(selDate)} 할 일만 보는 중
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:4px 10px" onclick="clearSelDate()">전체 보기 ✕</button>
+    </div>`;
+  } else {
+    sb_.style.display="none";
+    sb_.innerHTML="";
+  }
+  const rows=tasks
+    .filter(t=>!fil||t.status===fil)
+    .filter(t=>!selDate||t.due===selDate)
+    .sort((a,b)=>(a.status==="done")-(b.status==="done")||a.due.localeCompare(b.due));
   $("tlist").innerHTML=rows.length
     ?rows.map(t=>`<div class="task-item ${t.status}">
         <button class="chk" onclick="tog('${t.id}')" title="완료 토글">✓</button>
@@ -1218,7 +1249,7 @@ function render(){
           <button class="icon-act" onclick="tDel('${t.id}')" title="삭제">🗑️</button>
         </div>
       </div>`).join("")
-    :`<div class="empty">${tasks.length?"해당하는 할 일이 없어요.":"아직 할 일이 없어요.<br>위에서 첫 할 일을 추가해 보세요 ✨"}</div>`;
+    :`<div class="empty">${selDate?`${fmt(selDate)}에 등록된 할 일이 없어요.`:(tasks.length?"해당하는 할 일이 없어요.":"아직 할 일이 없어요.<br>위에서 첫 할 일을 추가해 보세요 ✨")}</div>`;
 
   /* 공강 목록 */
   const freeDays=DAYS.map((n,d)=>({n,d,a:free.filter(f=>f.day===d).sort((x,y)=>mm(x.s)-mm(y.s))})).filter(x=>x.a.length);
