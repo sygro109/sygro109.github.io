@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>국민대 팀플 보드</title>
-<meta name="description" content="국민대학교 팀플 관리 보드 - 할 일, 공강, 팀원, 메모를 한 곳에서">
+<title>국민대 불편사항 접수</title>
+<meta name="description" content="국민대학교 학생들의 불편사항을 접수하고 공유하는 플랫폼">
 <style>
 /* ── 토큰 ── */
 :root{
@@ -317,6 +317,50 @@ textarea.inp{resize:vertical;min-height:80px}
 .gb-empty{text-align:center;padding:40px 0;color:var(--sub);font-size:.9rem}
 .gb-loading{text-align:center;padding:24px 0;color:var(--sub);font-size:.85rem}
 .char-count{font-size:.75rem;color:var(--sub);text-align:right}
+
+/* ── 불편사항 ── */
+.cp-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:var(--sh);transition:box-shadow .15s,transform .15s;
+}
+.cp-card:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
+.cp-header{display:flex;align-items:flex-start;gap:10px}
+.cp-cat{
+  padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;
+  white-space:nowrap;flex:none;margin-top:2px;
+}
+.cp-cat-식당{background:rgba(217,138,0,.15);color:var(--amber)}
+.cp-cat-도서관{background:rgba(47,124,246,.15);color:var(--blue)}
+.cp-cat-셔틀{background:rgba(22,163,74,.15);color:var(--green)}
+.cp-cat-강의실{background:rgba(91,77,240,.15);color:var(--brand)}
+.cp-cat-기숙사{background:rgba(139,92,246,.15);color:#7c3aed}
+.cp-cat-기타{background:var(--surface2);color:var(--sub)}
+.cp-title{font-weight:700;font-size:.98rem;flex:1;line-height:1.4}
+.cp-body{font-size:.88rem;color:var(--sub);line-height:1.6;white-space:pre-wrap}
+.cp-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cp-meta{font-size:.76rem;color:var(--sub)}
+.status-badge{padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700}
+.status-badge.pending{background:rgba(229,72,77,.12);color:var(--red)}
+.status-badge.resolved{background:rgba(22,163,74,.12);color:var(--green)}
+.sympathy-btn{
+  display:flex;align-items:center;gap:5px;
+  border:1.5px solid var(--line);border-radius:99px;
+  padding:4px 12px;font-size:.8rem;font-weight:700;
+  background:none;color:var(--sub);margin-left:auto;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.sympathy-btn:hover,.sympathy-btn.on{border-color:var(--red);color:var(--red);background:rgba(229,72,77,.08)}
+.sympathy-btn .count{font-weight:800}
+.cp-grid{display:flex;flex-direction:column;gap:10px}
+.cp-empty{text-align:center;padding:48px 0;color:var(--sub);font-size:.9rem}
+.cp-loading{text-align:center;padding:24px 0;color:var(--sub);font-size:.85rem}
+.hero-banner{
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  border-radius:var(--radius);padding:28px 24px;color:#fff;margin-bottom:14px;
+}
+.hero-banner h1{font-size:1.5rem;font-weight:800;margin-bottom:6px}
+.hero-banner p{font-size:.9rem;opacity:.88;line-height:1.6}
 </style>
 </head>
 <body>
@@ -326,14 +370,20 @@ textarea.inp{resize:vertical;min-height:80px}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">🏫</div>
-      <div class="logo-text">국민대 팀플<small>보드 v2.0</small></div>
+      <div class="logo-text">국민대 불편함<small>접수 플랫폼 v1.0</small></div>
     </div>
 
     <nav class="nav-list">
-      <div class="nav-section">메인</div>
+      <div class="nav-section">불편사항</div>
       <button class="nav-item active" data-page="dash">
-        <span class="nav-icon">🏠</span>대시보드
+        <span class="nav-icon">🏠</span>홈
       </button>
+      <button class="nav-item" data-page="complaints">
+        <span class="nav-icon">📢</span>불편사항 접수
+        <span class="badge" id="badge-complaints">0</span>
+      </button>
+
+      <div class="nav-section">팀플 도구</div>
       <button class="nav-item" data-page="tasks">
         <span class="nav-icon">✅</span>할 일
         <span class="badge" id="badge-tasks">0</span>
@@ -341,8 +391,6 @@ textarea.inp{resize:vertical;min-height:80px}
       <button class="nav-item" data-page="calendar">
         <span class="nav-icon">📅</span>캘린더
       </button>
-
-      <div class="nav-section">팀</div>
       <button class="nav-item" data-page="team">
         <span class="nav-icon">👥</span>팀원 현황
       </button>
@@ -393,36 +441,77 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
     </header>
 
-    <!-- ─────────── 대시보드 ─────────── -->
+    <!-- ─────────── 홈 대시보드 ─────────── -->
     <section class="page active" id="page-dash">
+      <div class="hero-banner">
+        <h1>국민대 불편함 접수 플랫폼</h1>
+        <p>학교생활에서 불편한 점을 제보하고, 같은 불편함을 겪은 사람들과 공감을 나눠요.<br>여러분의 한 마디가 더 나은 국민대를 만들어요 💪</p>
+      </div>
       <div class="dash-grid">
         <div class="stat-row">
-          <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="s1">0</div><div class="stat-label">전체 할 일</div></div>
-          <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-val" id="s2">0</div><div class="stat-label">진행 중</div></div>
-          <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-val" id="s3">0</div><div class="stat-label">7일 내 마감</div></div>
-          <div class="stat-card"><div class="stat-icon">🕒</div><div class="stat-val" id="s4">0</div><div class="stat-label">오늘 공강</div></div>
+          <div class="stat-card"><div class="stat-icon">�</div><div class="stat-val" id="cp-s1">0</div><div class="stat-label">전체 불편사항</div></div>
+          <div class="stat-card"><div class="stat-icon">�</div><div class="stat-val" id="cp-s2">0</div><div class="stat-label">미해결</div></div>
+          <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="cp-s3">0</div><div class="stat-label">해결됨</div></div>
+          <div class="stat-card"><div class="stat-icon">❤️</div><div class="stat-val" id="cp-s4">0</div><div class="stat-label">총 공감 수</div></div>
         </div>
-
-        <div class="prog-card">
-          <div class="prog-head"><span>팀 전체 진행률</span><span id="pct">0% (0/0)</span></div>
-          <div class="track"><div class="fill" id="fill" style="width:0"></div></div>
-        </div>
-
         <div class="two-col">
           <div class="card">
-            <div class="card-title"><span class="ct-icon">📌</span>마감 임박 할 일</div>
-            <div id="dash-urgent"></div>
+            <div class="card-title"><span class="ct-icon">🔥</span>공감 많은 불편사항 TOP 3</div>
+            <div id="cp-top"></div>
           </div>
           <div class="card">
-            <div class="card-title"><span class="ct-icon">🤝</span>팀 모임 추천 시간</div>
-            <div id="dash-common"></div>
+            <div class="card-title"><span class="ct-icon">📊</span>카테고리별 현황</div>
+            <div id="cp-cat-stats"></div>
           </div>
         </div>
-
         <div class="card">
-          <div class="card-title"><span class="ct-icon">👥</span>팀원</div>
-          <div class="member-grid" id="dash-team"></div>
+          <div class="card-title"><span class="ct-icon">�</span>최근 접수된 불편사항</div>
+          <div id="cp-recent"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- ─────────── 불편사항 접수 ─────────── -->
+    <section class="page" id="page-complaints">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><span class="ct-icon">📢</span>불편사항 접수하기</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <input class="inp" id="cp-nickname" maxlength="20" placeholder="닉네임 (익명 가능)" style="flex:1">
+            <select class="inp" id="cp-category" style="flex:1">
+              <option value="식당">🍽 식당</option>
+              <option value="도서관">📚 도서관</option>
+              <option value="셔틀">🚌 셔틀</option>
+              <option value="강의실">🏫 강의실</option>
+              <option value="기숙사">🏠 기숙사</option>
+              <option value="기타">📌 기타</option>
+            </select>
+          </div>
+          <input class="inp inp-full" id="cp-title-inp" maxlength="60" placeholder="제목 (예: 도서관 냉방이 너무 강해요)" required>
+          <textarea class="inp inp-full" id="cp-body-inp" maxlength="500" placeholder="자세한 내용을 적어주세요..." rows="3"></textarea>
+          <div class="char-count"><span id="cp-count">0</span>/500</div>
+          <div class="form-row">
+            <button class="btn" id="cp-submit">📢 접수하기</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ct-icon">�</span>불편사항 목록 <span id="cp-total" style="font-size:.8rem;color:var(--sub);font-weight:500"></span></div>
+        <div class="chips" id="cp-filter-chips" style="margin-bottom:14px">
+          <button class="chip on" data-cat="">전체</button>
+          <button class="chip" data-cat="식당">🍽 식당</button>
+          <button class="chip" data-cat="도서관">📚 도서관</button>
+          <button class="chip" data-cat="셔틀">🚌 셔틀</button>
+          <button class="chip" data-cat="강의실">🏫 강의실</button>
+          <button class="chip" data-cat="기숙사">🏠 기숙사</button>
+          <button class="chip" data-cat="기타">📌 기타</button>
+        </div>
+        <div class="chips" id="cp-status-chips" style="margin-bottom:14px">
+          <button class="chip on" data-status="">전체 상태</button>
+          <button class="chip" data-status="pending">🔴 미해결</button>
+          <button class="chip" data-status="resolved">✅ 해결됨</button>
+        </div>
+        <div class="cp-grid" id="cp-list"><div class="cp-loading">불러오는 중...</div></div>
       </div>
     </section>
 
@@ -678,7 +767,8 @@ applyTheme();
 
 /* ───────────── 네비게이션 ───────────── */
 const PAGES={
-  dash:{title:"대시보드",sub:"오늘도 화이팅! 🚀"},
+  dash:{title:"홈",sub:"국민대 불편함 접수 플랫폼 🏫"},
+  complaints:{title:"불편사항 접수",sub:"불편함을 공유하고 공감해요 �"},
   tasks:{title:"할 일",sub:"팀 과제와 역할 관리"},
   calendar:{title:"캘린더",sub:"마감일을 달력에서 확인"},
   team:{title:"팀원 현황",sub:"역할과 기여도 한눈에"},
@@ -715,6 +805,8 @@ function navigate(page){
   if(page==="calendar")renderCalendar();
   if(page==="settings")renderSettings();
   if(page==="guestbook")gbLoad();
+  if(page==="complaints")cpLoad();
+  if(page==="dash")cpDashLoad();
   // 모바일: 사이드바 닫기
   $("sidebar").classList.remove("open");
   $("sidebar-overlay").classList.remove("open");
@@ -1176,8 +1268,166 @@ const SUPABASE_ANON = "sb_publishable_aX6VGBoFVb2mNMQXxe0kkA_Maf6xN4L";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+/* ═══════════════════════════════════════
+   불편사항 — Supabase 연동
+   ═══════════════════════════════════════ */
+const CATS = ["식당","도서관","셔틀","강의실","기숙사","기타"];
+const CAT_EMOJI = {식당:"🍽",도서관:"📚",셔틀:"🚌",강의실:"🏫",기숙사:"🏠",기타:"📌"};
+
+/* 공감한 글 목록 (localStorage) */
+const LIKED_KEY = "kmu-cp-liked";
+function getLiked(){ try{ return new Set(JSON.parse(localStorage.getItem(LIKED_KEY)||"[]")); }catch{ return new Set(); } }
+function saveLiked(s){ try{ localStorage.setItem(LIKED_KEY, JSON.stringify([...s])); }catch{} }
+
+/* 필터 상태 */
+let cpCat = "", cpStatus = "";
+
+/* 카테고리 필터 칩 이벤트 */
+$("cp-filter-chips").onclick = e => {
+  const b = e.target.closest(".chip");
+  if(!b) return;
+  cpCat = b.dataset.cat;
+  document.querySelectorAll("#cp-filter-chips .chip").forEach(c => c.classList.toggle("on", c.dataset.cat === cpCat));
+  cpLoad();
+};
+$("cp-status-chips").onclick = e => {
+  const b = e.target.closest(".chip");
+  if(!b) return;
+  cpStatus = b.dataset.status;
+  document.querySelectorAll("#cp-status-chips .chip").forEach(c => c.classList.toggle("on", c.dataset.status === cpStatus));
+  cpLoad();
+};
+
 /* 글자 수 카운터 */
-$("gb-msg").addEventListener("input", () => {
+$("cp-body-inp").addEventListener("input", () => {
+  $("cp-count").textContent = $("cp-body-inp").value.length;
+});
+
+/* 날짜 포맷 */
+function cpFmt(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString("ko",{month:"short",day:"numeric"}) + " " + d.toLocaleTimeString("ko",{hour:"2-digit",minute:"2-digit"});
+}
+
+/* 불편사항 카드 HTML */
+function cpCardHTML(r, liked){
+  const isLiked = liked.has(r.id);
+  return `<div class="cp-card" id="cpr-${r.id}">
+    <div class="cp-header">
+      <span class="cp-cat cp-cat-${esc(r.category)}">${CAT_EMOJI[r.category]||"📌"} ${esc(r.category)}</span>
+      <span class="cp-title">${esc(r.title)}</span>
+    </div>
+    ${r.body ? `<div class="cp-body">${esc(r.body)}</div>` : ""}
+    <div class="cp-footer">
+      <span class="cp-meta">${esc(r.nickname||"익명")} · ${cpFmt(r.created_at)}</span>
+      <span class="status-badge ${r.status}">${r.status==="resolved"?"✅ 해결됨":"🔴 미해결"}</span>
+      <button class="sympathy-btn ${isLiked?"on":""}" onclick="cpLike(${r.id})" title="공감">
+        ❤️ <span class="count" id="cp-like-${r.id}">${r.sympathy||0}</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+/* 목록 불러오기 */
+async function cpLoad(){
+  $("cp-list").innerHTML = '<div class="cp-loading">불러오는 중...</div>';
+  let q = sb.from("complaints").select("*",{count:"exact"}).order("sympathy",{ascending:false}).order("created_at",{ascending:false}).limit(100);
+  if(cpCat)    q = q.eq("category", cpCat);
+  if(cpStatus) q = q.eq("status", cpStatus);
+  const {data, error, count} = await q;
+  if(error){ $("cp-list").innerHTML=`<div class="cp-empty">⚠️ 불러오기 실패: ${esc(error.message)}</div>`; return; }
+  $("cp-total").textContent = count ? `(${count}건)` : "";
+  const liked = getLiked();
+  if(!data.length){ $("cp-list").innerHTML='<div class="cp-empty">아직 접수된 불편사항이 없어요.<br>첫 번째로 제보해주세요 📢</div>'; return; }
+  $("cp-list").innerHTML = data.map(r => cpCardHTML(r, liked)).join("");
+  const b = $("badge-complaints");
+  const pending = data.filter(r=>r.status==="pending").length;
+  if(b){ b.textContent=pending; b.style.display=pending?"":"none"; }
+}
+
+/* 접수하기 */
+$("cp-submit").addEventListener("click", async () => {
+  const nickname = $("cp-nickname").value.trim() || "익명";
+  const category = $("cp-category").value;
+  const title    = $("cp-title-inp").value.trim();
+  const body     = $("cp-body-inp").value.trim();
+  if(!title){ toast("제목을 입력해주세요"); return; }
+  $("cp-submit").disabled = true;
+  $("cp-submit").textContent = "접수 중...";
+  const {error} = await sb.from("complaints").insert({nickname, category, title, body, status:"pending", sympathy:0});
+  $("cp-submit").disabled = false;
+  $("cp-submit").textContent = "📢 접수하기";
+  if(error){ toast("접수 실패: "+error.message); return; }
+  $("cp-nickname").value=""; $("cp-title-inp").value=""; $("cp-body-inp").value=""; $("cp-count").textContent="0";
+  toast("불편사항이 접수됐어요 📢");
+  cpLoad();
+});
+
+/* 공감 버튼 */
+async function cpLike(id){
+  const liked = getLiked();
+  const btn = document.querySelector(`#cpr-${id} .sympathy-btn`);
+  const countEl = $(`cp-like-${id}`);
+  if(!btn||!countEl) return;
+  if(liked.has(id)){
+    liked.delete(id); saveLiked(liked);
+    const newVal = Math.max(0, parseInt(countEl.textContent)-1);
+    await sb.from("complaints").update({sympathy:newVal}).eq("id",id);
+    countEl.textContent=newVal; btn.classList.remove("on"); toast("공감을 취소했어요");
+  } else {
+    liked.add(id); saveLiked(liked);
+    const newVal = parseInt(countEl.textContent)+1;
+    await sb.from("complaints").update({sympathy:newVal}).eq("id",id);
+    countEl.textContent=newVal; btn.classList.add("on"); toast("공감했어요 ❤️");
+  }
+}
+
+/* 홈 대시보드용 불편사항 통계 */
+async function cpDashLoad(){
+  const {data, error} = await sb.from("complaints").select("*").order("sympathy",{ascending:false}).limit(200);
+  if(error||!data) return;
+  const total=data.length, pending=data.filter(r=>r.status==="pending").length;
+  const resolved=data.filter(r=>r.status==="resolved").length;
+  const totalSympathy=data.reduce((a,r)=>a+(r.sympathy||0),0);
+  $("cp-s1").textContent=total; $("cp-s2").textContent=pending;
+  $("cp-s3").textContent=resolved; $("cp-s4").textContent=totalSympathy;
+  /* TOP 3 */
+  const top3=[...data].sort((a,b)=>(b.sympathy||0)-(a.sympathy||0)).slice(0,3);
+  $("cp-top").innerHTML=top3.length
+    ?top3.map((r,i)=>`<div class="task-item">
+        <span style="font-size:1.2rem;width:26px;text-align:center">${["🥇","🥈","🥉"][i]}</span>
+        <div class="task-body">
+          <div class="task-title">${esc(r.title)}</div>
+          <div class="task-meta"><span class="cp-cat cp-cat-${esc(r.category)}" style="padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700">${CAT_EMOJI[r.category]||"📌"} ${esc(r.category)}</span> ❤️ ${r.sympathy||0}명 공감</div>
+        </div>
+      </div>`).join("")
+    :'<div class="empty">아직 데이터가 없어요</div>';
+  /* 카테고리별 */
+  const catCount={};CATS.forEach(c=>catCount[c]=0);
+  data.forEach(r=>{if(catCount[r.category]!==undefined)catCount[r.category]++;});
+  const maxCat=Math.max(1,...Object.values(catCount));
+  $("cp-cat-stats").innerHTML=CATS.map(c=>`
+    <div style="display:grid;grid-template-columns:70px 1fr 30px;gap:8px;align-items:center;font-size:.82rem;margin:6px 0">
+      <span>${CAT_EMOJI[c]} ${c}</span>
+      <div class="track" style="height:8px"><div class="fill" style="width:${catCount[c]/maxCat*100}%"></div></div>
+      <span>${catCount[c]}</span>
+    </div>`).join("");
+  /* 최근 3개 */
+  const recent=[...data].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,3);
+  $("cp-recent").innerHTML=recent.length
+    ?recent.map(r=>`<div class="task-item">
+        <span class="cp-cat cp-cat-${esc(r.category)}" style="padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;flex:none">${CAT_EMOJI[r.category]||"📌"} ${esc(r.category)}</span>
+        <div class="task-body">
+          <div class="task-title">${esc(r.title)}</div>
+          <div class="task-meta">${cpFmt(r.created_at)} · ❤️ ${r.sympathy||0}</div>
+        </div>
+        <span class="status-badge ${r.status}" style="flex:none">${r.status==="resolved"?"✅":"🔴"}</span>
+      </div>`).join("")
+    :'<div class="empty">아직 데이터가 없어요</div>';
+}
+
+/* 첫 화면 로드 */
+cpDashLoad();
   $("gb-count").textContent = $("gb-msg").value.length;
 });
 
