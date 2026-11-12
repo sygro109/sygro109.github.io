@@ -345,14 +345,18 @@ textarea.inp{resize:vertical;min-height:80px}
 .status-badge.pending{background:rgba(229,72,77,.12);color:var(--red)}
 .status-badge.resolved{background:rgba(22,163,74,.12);color:var(--green)}
 .sympathy-btn{
-  display:flex;align-items:center;gap:5px;
-  border:1.5px solid var(--line);border-radius:99px;
-  padding:4px 12px;font-size:.8rem;font-weight:700;
+  display:flex;align-items:center;gap:7px;
+  border:2px solid var(--line);border-radius:99px;
+  padding:9px 20px;font-size:1rem;font-weight:800;
   background:none;color:var(--sub);margin-left:auto;
-  transition:border-color .15s,color .15s,background .15s;
+  transition:border-color .15s,color .15s,background .15s,transform .1s;
 }
-.sympathy-btn:hover,.sympathy-btn.on{border-color:var(--red);color:var(--red);background:rgba(229,72,77,.08)}
-.sympathy-btn .count{font-weight:800}
+.sympathy-btn:hover{border-color:var(--red);color:var(--red);background:rgba(229,72,77,.08)}
+.sympathy-btn.on{border-color:var(--red);color:var(--red);background:rgba(229,72,77,.14)}
+.sympathy-btn:active{transform:scale(.94)}
+.sympathy-btn .count{font-weight:800;font-size:1.05rem}
+.cp-actions{display:flex;gap:4px}
+.cp-actions .icon-act{font-size:1rem;padding:6px 8px}
 .cp-grid{display:flex;flex-direction:column;gap:10px}
 .cp-empty{text-align:center;padding:48px 0;color:var(--sub);font-size:.9rem}
 .cp-loading{text-align:center;padding:24px 0;color:var(--sub);font-size:.85rem}
@@ -391,10 +395,6 @@ textarea.inp{resize:vertical;min-height:80px}
       </button>
       <button class="nav-item" data-page="team">
         <span class="nav-icon">👥</span>팀원 현황
-      </button>
-      <button class="nav-item" data-page="free">
-        <span class="nav-icon">🕒</span>공강 타임
-        <span class="badge" id="badge-free">0</span>
       </button>
 
       <div class="nav-section">기타</div>
@@ -488,13 +488,15 @@ textarea.inp{resize:vertical;min-height:80px}
           <input class="inp inp-full" id="cp-title-inp" maxlength="60" placeholder="제목 (예: 도서관 냉방이 너무 강해요)" required>
           <textarea class="inp inp-full" id="cp-body-inp" maxlength="500" placeholder="자세한 내용을 적어주세요..." rows="3"></textarea>
           <div class="char-count"><span id="cp-count">0</span>/500</div>
+          <input class="inp inp-full" id="cp-password" type="password" maxlength="20" placeholder="비밀번호 (수정·삭제 시 필요)" required>
           <div class="form-row">
             <button class="btn" id="cp-submit">📢 접수하기</button>
+            <button type="button" class="btn btn-ghost" id="cp-cancel" hidden>취소</button>
           </div>
         </div>
       </div>
       <div class="card">
-        <div class="card-title"><span class="ct-icon">�</span>불편사항 목록 <span id="cp-total" style="font-size:.8rem;color:var(--sub);font-weight:500"></span></div>
+        <div class="card-title"><span class="ct-icon">📋</span>불편사항 목록 <span id="cp-total" style="font-size:.8rem;color:var(--sub);font-weight:500"></span></div>
         <div class="chips" id="cp-filter-chips" style="margin-bottom:14px">
           <button class="chip on" data-cat="">전체</button>
           <button class="chip" data-cat="식당">🍽 식당</button>
@@ -567,61 +569,15 @@ textarea.inp{resize:vertical;min-height:80px}
     <section class="page" id="page-team">
       <div class="card" style="margin-bottom:14px">
         <div class="card-title"><span class="ct-icon">👤</span>팀원 추가</div>
-        <div class="form-row">
-          <input class="inp" id="mem-name" maxlength="20" placeholder="이름" style="flex:1">
+        <form id="mf" class="form-row">
+          <input class="inp" id="mem-name" maxlength="20" placeholder="이름" style="flex:1" required>
           <input class="inp" id="mem-role" maxlength="30" placeholder="역할 (예: 기획, 개발, 디자인)" style="flex:1">
-          <button class="btn" id="mem-add">추가</button>
-        </div>
+          <button class="btn" id="mem-add" type="submit">추가</button>
+        </form>
       </div>
       <div class="card">
         <div class="card-title"><span class="ct-icon">👥</span>팀원 현황</div>
         <div class="member-grid" id="team-grid"></div>
-      </div>
-    </section>
-
-    <!-- ─────────── 공강 ─────────── -->
-    <section class="page" id="page-free">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title"><span class="ct-icon">➕</span><span id="free-form-title">공강 추가</span></div>
-        <form id="ff" class="form-grid">
-          <div class="form-row">
-            <input class="inp" id="f-o" required maxlength="20" list="members" placeholder="이름" style="flex:1">
-            <select class="inp" id="f-d" style="flex:1">
-              <option value="0">월요일</option><option value="1">화요일</option>
-              <option value="2">수요일</option><option value="3">목요일</option><option value="4">금요일</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <input class="inp" id="f-s" type="time" required value="10:00" style="flex:1">
-            <span style="align-self:center;color:var(--sub)">~</span>
-            <input class="inp" id="f-e" type="time" required value="11:00" style="flex:1">
-            <input class="inp" id="f-p" list="places" maxlength="20" placeholder="장소 (선택)" style="flex:1">
-          </div>
-          <div>
-            <div style="font-size:.8rem;color:var(--sub);margin-bottom:6px">활동 유형</div>
-            <div class="seg" id="f-t">
-              <button type="button" data-t="study" class="on">📚 공부</button>
-              <button type="button" data-t="meal">🍚 식사</button>
-              <button type="button" data-t="rest">😴 휴식</button>
-              <button type="button" data-t="meeting">🤝 회의</button>
-            </div>
-          </div>
-          <div class="form-row">
-            <button class="btn" id="f-btn">추가</button>
-            <button type="button" class="btn btn-ghost" id="f-x" hidden>취소</button>
-          </div>
-        </form>
-      </div>
-
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title"><span class="ct-icon">🤝</span>팀 모임 추천</div>
-        <div id="common"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><span class="ct-icon">🗓️</span>주간 공강표</div>
-        <div id="flist"></div>
-        <div id="acts" style="margin-top:14px"></div>
       </div>
     </section>
 
@@ -891,83 +847,19 @@ const dBadge=t=>{
     :`<span class="chip chip-blue">D-${d}</span>`;
 };
 
-/* ───────────── 공강 폼 ───────────── */
-let fEdit=null,ftype="study";
-
-const synT=()=>document.querySelectorAll("#f-t button").forEach(b=>b.classList.toggle("on",b.dataset.t===ftype));
-$("f-t").onclick=e=>{const b=e.target.closest("button");if(b&&b.dataset.t){ftype=b.dataset.t;synT()}};
-
-function fReset(){
-  fEdit=null;ftype="study";synT();$("f-p").value="";
-  $("f-btn").textContent="추가";$("f-x").hidden=true;
-  $("free-form-title").textContent="공강 추가";
-}
-$("f-x").onclick=fReset;
-
-$("ff").addEventListener("submit",e=>{
-  e.preventDefault();
-  const o=$("f-o").value.trim(),s=$("f-s").value,en=$("f-e").value;
-  if(!o||!s||!en||mm(s)>=mm(en)){toast("종료 시간은 시작보다 늦어야 해요 ⚠️");return}
-  const r={owner:o,day:+$("f-d").value,s,e:en,type:ftype,place:$("f-p").value.trim()};
-  if(fEdit){
-    free=free.map(x=>x.id===fEdit?{...x,...r}:x);toast("공강이 수정됐어요 ✏️");
-  }else{
-    free.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,4),...r});
-    toast("공강이 추가됐어요 🕒");
-  }
-  fReset();sv();render();
-});
-
-function fEditStart(id){
-  const f=free.find(x=>x.id===id);if(!f)return;
-  fEdit=id;$("f-o").value=f.owner;$("f-d").value=f.day;
-  $("f-s").value=f.s;$("f-e").value=f.e;$("f-p").value=f.place||"";
-  ftype=f.type||"study";synT();
-  $("f-btn").textContent="저장";$("f-x").hidden=false;
-  $("free-form-title").textContent="공강 수정";
-  navigate("free");
-}
-
-function fDel(id){
-  free=free.filter(f=>f.id!==id);
-  if(fEdit===id)fReset();
-  sv();render();toast("삭제됐어요 🗑️");
-}
-
-/* ───────────── 공강 겹침 계산 ───────────── */
-function common(list){
-  const people=[...new Set(list.map(f=>f.owner))],out=[];
-  DAYS.forEach((_,d)=>{
-    const ev=[];
-    people.forEach(p=>{
-      const iv=list.filter(f=>f.owner===p&&f.day===d).map(f=>[mm(f.s),mm(f.e)]).sort((a,b)=>a[0]-b[0]);
-      const m=[];
-      iv.forEach(x=>{const l=m[m.length-1];l&&x[0]<=l[1]?l[1]=Math.max(l[1],x[1]):m.push([...x])});
-      m.forEach(x=>ev.push([x[0],1,p],[x[1],-1,p]));
-    });
-    ev.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
-    let c=0;
-    ev.forEach(([t,v],i)=>{
-      if(i&&t>ev[i-1][0]&&c>=2&&t-ev[i-1][0]>=30)out.push({d,s:ev[i-1][0],e:t,c});
-      c+=v;
-    });
-  });
-  return out;
-}
-
 /* ───────────── 팀원 ───────────── */
-$("mem-add").onclick=()=>{
+$("mf").addEventListener("submit",e=>{
+  e.preventDefault();
   const n=$("mem-name").value.trim(),r=$("mem-role").value.trim();
-  if(!n)return;
+  if(!n){toast("이름을 입력해주세요");return}
   if(!extraMembers.find(m=>m.name===n)){
     extraMembers.push({name:n,role:r});sv();render();toast(`${n} 추가됐어요 👤`);
   }else{
-    // 역할 업데이트
     extraMembers=extraMembers.map(m=>m.name===n?{...m,role:r}:m);
     sv();render();toast(`${n} 역할 업데이트됐어요 ✏️`);
   }
-  $("mem-name").value="";$("mem-role").value="";
-};
+  $("mem-name").value="";$("mem-role").value="";$("mem-name").focus();
+});
 
 function memDel(name){
   extraMembers=extraMembers.filter(m=>m.name!==name);sv();render();toast("삭제됐어요 🗑️");
@@ -1116,8 +1008,6 @@ function updateBadges(){
   const open=tasks.filter(t=>t.status!=="done").length;
   $("badge-tasks").textContent=open;
   $("badge-tasks").style.display=open?"":"none";
-  $("badge-free").textContent=free.length;
-  $("badge-free").style.display=free.length?"":"none";
   $("badge-notes").textContent=notes.length;
   $("badge-notes").style.display=notes.length?"":"none";
 }
@@ -1139,67 +1029,13 @@ function render(){
   /* datalist 업데이트 */
   $("members").innerHTML=allNames.map(n=>`<option value="${esc(n)}">`).join("");
 
-  /* 통계 */
-  const open=tasks.filter(t=>t.status!=="done");
-  const done=tasks.length-open.length;
-  $("s1").textContent=tasks.length;
-  $("s2").textContent=tasks.filter(t=>t.status==="doing").length;
-  $("s3").textContent=open.filter(t=>{const d=dday(t.due);return d>=0&&d<=7}).length;
-  $("s4").textContent=free.filter(f=>f.day===td_).length;
-  const pct=tasks.length?Math.round(done/tasks.length*100):0;
-  $("pct").textContent=`${pct}% (${done}/${tasks.length})`;
-  $("fill").style.width=pct+"%";
-
   /* 배지 */
   updateBadges();
 
-  /* 대시보드 - 임박 할 일 */
-  const urgent=open.filter(t=>{const d=dday(t.due);return d<=3}).sort((a,b)=>dday(a.due)-dday(b.due)).slice(0,5);
-  $("dash-urgent").innerHTML=urgent.length
-    ?urgent.map(t=>`<div class="task-item">
-        <div class="task-body">
-          <div class="task-title">${esc(t.title)}</div>
-          <div class="task-meta">${av(t.owner,"sm")} ${esc(t.owner)} · ${dBadge(t)}</div>
-        </div>
-      </div>`).join("")
-    :`<div class="empty">임박한 마감 할 일이 없어요 ✨</div>`;
-
-  /* 대시보드 - 공강 추천 */
-  const cm=common(free),np=[...new Set(free.map(f=>f.owner))].length;
-  const top=[...cm].sort((a,b)=>b.c-a.c||(b.e-b.s)-(a.e-a.s)||a.d-b.d).slice(0,5);
-  const cmHTML=np<2
-    ?`<div class="empty" style="padding:8px 0">2명 이상 공강을 등록하면<br>겹치는 시간을 알려드려요</div>`
-    :top.length
-      ?`<div class="pick-list">${top.map(x=>`<span class="pill">${DAYS[x.d]} ${hm(x.s)}–${hm(x.e)} · ${x.c}/${np}명${x.c===np?" ✨":""}</span>`).join("")}</div>`
-      :`<div class="empty" style="padding:8px 0">30분 이상 겹치는 시간이 없어요</div>`;
-  $("dash-common").innerHTML=cmHTML;
-  $("common").innerHTML=cmHTML;
-
-  /* 대시보드 & 팀원 카드 */
-  const memberHTML=allNames.map(n=>{
-    const ta=tasks.filter(t=>t.owner===n);
-    const tdone=ta.filter(t=>t.status==="done").length;
-    const fa=free.filter(f=>f.owner===n);
-    const em=extraMembers.find(m=>m.name===n);
-    const pct=ta.length?Math.round(tdone/ta.length*100):0;
-    return`<div class="member-card">
-      ${av(n,"lg")}
-      <div class="mem-name">${esc(n)}</div>
-      ${em?.role?`<div class="mem-meta">${esc(em.role)}</div>`:""}
-      <div class="mem-pills">
-        <span class="chip chip-blue">✅ ${tdone}/${ta.length}</span>
-        <span class="chip chip-green">🕒 ${fa.length}개</span>
-      </div>
-      ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
-    </div>`;
-  }).join("");
-  $("dash-team").innerHTML=memberHTML||`<div class="empty" style="padding:8px">아직 등록된 팀원이 없어요</div>`;
-
-  /* 팀 페이지 */
+  /* 팀원 현황 페이지 */
   $("team-grid").innerHTML=allNames.map(n=>{
     const ta=tasks.filter(t=>t.owner===n);
     const tdone=ta.filter(t=>t.status==="done").length;
-    const fa=free.filter(f=>f.owner===n);
     const em=extraMembers.find(m=>m.name===n);
     const pct=ta.length?Math.round(tdone/ta.length*100):0;
     return`<div class="member-card">
@@ -1208,12 +1044,11 @@ function render(){
       ${em?.role?`<div class="mem-meta">${esc(em.role)}</div>`:""}
       <div class="mem-pills">
         <span class="chip chip-blue">📋 ${tdone}/${ta.length} 완료</span>
-        <span class="chip chip-green">🕒 공강 ${fa.length}개</span>
       </div>
       ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
       ${em?`<button class="btn btn-ghost btn-sm" onclick="memDel('${esc(n)}')">삭제</button>`:""}
     </div>`;
-  }).join("")||`<div class="empty">아직 팀원이 없어요.<br>할 일이나 공강을 추가하면 자동으로 등록돼요 👥</div>`;
+  }).join("")||`<div class="empty">아직 팀원이 없어요.<br>위에서 팀원을 추가하거나 할 일을 등록하면 자동으로 등록돼요 👥</div>`;
 
   /* 할 일 목록 */
   document.querySelectorAll("#fchips button").forEach(b=>b.classList.toggle("on",b.dataset.f===fil));
@@ -1250,36 +1085,6 @@ function render(){
         </div>
       </div>`).join("")
     :`<div class="empty">${selDate?`${fmt(selDate)}에 등록된 할 일이 없어요.`:(tasks.length?"해당하는 할 일이 없어요.":"아직 할 일이 없어요.<br>위에서 첫 할 일을 추가해 보세요 ✨")}</div>`;
-
-  /* 공강 목록 */
-  const freeDays=DAYS.map((n,d)=>({n,d,a:free.filter(f=>f.day===d).sort((x,y)=>mm(x.s)-mm(y.s))})).filter(x=>x.a.length);
-  $("flist").innerHTML=freeDays.length
-    ?freeDays.map(({n,d,a})=>`<div class="day-block ${d===td_?"today":""}">
-        <div class="day-label">${n}</div>
-        <div class="slots">${a.map(f=>`<div class="slot ${f.type}">
-          <b>${f.s}–${f.e}</b>
-          ${av(f.owner,"sm")} ${esc(f.owner)} · ${(TY[f.type]||TY.study)[0]} ${(TY[f.type]||TY.study)[1]}
-          ${f.place?` · 📍${esc(f.place)}`:""}
-          <span class="slot-actions">
-            <button class="icon-act" onclick="fEditStart('${f.id}')" title="수정">✏️</button>
-            <button class="icon-act" onclick="fDel('${f.id}')" title="삭제">🗑️</button>
-          </span>
-        </div>`).join("")}</div>
-      </div>`).join("")
-    :`<div class="empty">등록된 공강이 없어요.<br>위에서 공강 시간을 추가해 보세요 🕒</div>`;
-
-  /* 활동 통계 막대 */
-  const tm={study:0,meal:0,rest:0,meeting:0};
-  free.forEach(f=>tm[f.type]=(tm[f.type]||0)+mm(f.e)-mm(f.s));
-  const mx=Math.max(1,...Object.values(tm));
-  $("acts").innerHTML=free.length
-    ?`<div style="font-weight:700;font-size:.85rem;margin-bottom:8px">활동별 시간</div>`
-      +Object.keys(TY).map(k=>`<div class="bar-row">
-          <span>${TY[k][0]} ${TY[k][1]}</span>
-          <div class="track"><div class="fill" style="width:${tm[k]/mx*100}%"></div></div>
-          <span>${tm[k]?dur(tm[k]):"-"}</span>
-        </div>`).join("")
-    :"";
 
   /* 메모 */
   renderNotes();
@@ -1353,6 +1158,11 @@ function cpCardHTML(r, liked){
     <div class="cp-header">
       <span class="cp-cat cp-cat-${esc(r.category)}">${CAT_EMOJI[r.category]||"📌"} ${esc(r.category)}</span>
       <span class="cp-title">${esc(r.title)}</span>
+      <span class="cp-actions">
+        <button class="icon-act" onclick="cpStatusToggle(${r.id},'${r.status}')" title="해결 상태 변경">${r.status==="resolved"?"↩️":"✔️"}</button>
+        <button class="icon-act" onclick="cpEditStart(${r.id})" title="수정">✏️</button>
+        <button class="icon-act" onclick="cpDel(${r.id})" title="삭제">🗑️</button>
+      </span>
     </div>
     ${r.body ? `<div class="cp-body">${esc(r.body)}</div>` : ""}
     <div class="cp-footer">
@@ -1382,23 +1192,99 @@ async function cpLoad(){
   if(b){ b.textContent=pending; b.style.display=pending?"":"none"; }
 }
 
-/* 접수하기 */
+/* 접수 / 수정하기 */
+let cpEditId = null; // 수정 중인 불편사항 id
+
+function cpReset(){
+  cpEditId = null;
+  $("cp-nickname").value=""; $("cp-title-inp").value=""; $("cp-body-inp").value="";
+  $("cp-password").value=""; $("cp-count").textContent="0";
+  $("cp-submit").textContent="📢 접수하기";
+  $("cp-cancel").hidden = true;
+}
+$("cp-cancel").addEventListener("click", cpReset);
+
 $("cp-submit").addEventListener("click", async () => {
   const nickname = $("cp-nickname").value.trim() || "익명";
   const category = $("cp-category").value;
   const title    = $("cp-title-inp").value.trim();
   const body     = $("cp-body-inp").value.trim();
+  const pw       = $("cp-password").value;
   if(!title){ toast("제목을 입력해주세요"); return; }
+  if(!pw){ toast("비밀번호를 입력해주세요"); return; }
+  const pw_hash = await hashPw(pw);
+
   $("cp-submit").disabled = true;
-  $("cp-submit").textContent = "접수 중...";
-  const {error} = await sb.from("complaints").insert({nickname, category, title, body, status:"pending", sympathy:0});
-  $("cp-submit").disabled = false;
-  $("cp-submit").textContent = "📢 접수하기";
-  if(error){ toast("접수 실패: "+error.message); return; }
-  $("cp-nickname").value=""; $("cp-title-inp").value=""; $("cp-body-inp").value=""; $("cp-count").textContent="0";
-  toast("불편사항이 접수됐어요 📢");
-  cpLoad();
+
+  if(cpEditId){
+    /* 수정 — 비밀번호 확인 */
+    $("cp-submit").textContent = "수정 중...";
+    const {data:row} = await sb.from("complaints").select("pw_hash").eq("id",cpEditId).single();
+    if(!row || row.pw_hash !== pw_hash){
+      $("cp-submit").disabled=false; $("cp-submit").textContent="💾 수정 저장";
+      toast("비밀번호가 틀렸어요"); return;
+    }
+    const {error} = await sb.from("complaints").update({nickname, category, title, body}).eq("id",cpEditId);
+    $("cp-submit").disabled=false;
+    if(error){ $("cp-submit").textContent="💾 수정 저장"; toast("수정 실패: "+error.message); return; }
+    toast("수정됐어요 ✏️");
+    cpReset(); cpLoad();
+  } else {
+    /* 신규 접수 */
+    $("cp-submit").textContent = "접수 중...";
+    const {error} = await sb.from("complaints").insert({nickname, category, title, body, status:"pending", sympathy:0, pw_hash});
+    $("cp-submit").disabled = false;
+    $("cp-submit").textContent = "📢 접수하기";
+    if(error){ toast("접수 실패: "+error.message); return; }
+    cpReset();
+    toast("불편사항이 접수됐어요 📢");
+    cpLoad();
+  }
 });
+
+/* 수정 시작 — 폼에 기존 내용 채우기 */
+async function cpEditStart(id){
+  const {data:r, error} = await sb.from("complaints").select("*").eq("id",id).single();
+  if(error||!r){ toast("불러오기 실패"); return; }
+  cpEditId = id;
+  $("cp-nickname").value = r.nickname==="익명" ? "" : r.nickname;
+  $("cp-category").value = r.category;
+  $("cp-title-inp").value = r.title;
+  $("cp-body-inp").value = r.body||"";
+  $("cp-count").textContent = (r.body||"").length;
+  $("cp-password").value = "";
+  $("cp-submit").textContent = "💾 수정 저장";
+  $("cp-cancel").hidden = false;
+  window.scrollTo({top:0, behavior:"smooth"});
+  toast("수정하려면 비밀번호를 입력하세요");
+}
+
+/* 삭제 — 비밀번호 확인 */
+async function cpDel(id){
+  const pw = prompt("삭제하려면 비밀번호를 입력하세요:");
+  if(pw===null) return;
+  const pw_hash = await hashPw(pw);
+  const {data:row} = await sb.from("complaints").select("pw_hash").eq("id",id).single();
+  if(!row || row.pw_hash !== pw_hash){ toast("비밀번호가 틀렸어요"); return; }
+  const {error} = await sb.from("complaints").delete().eq("id",id);
+  if(error){ toast("삭제 실패: "+error.message); return; }
+  toast("삭제됐어요 �️");
+  cpLoad();
+}
+
+/* 해결 상태 토글 — 비밀번호 확인 */
+async function cpStatusToggle(id, cur){
+  const next = cur==="resolved" ? "pending" : "resolved";
+  const pw = prompt(`상태를 '${next==="resolved"?"해결됨":"미해결"}'(으)로 바꾸려면\n비밀번호를 입력하세요:`);
+  if(pw===null) return;
+  const pw_hash = await hashPw(pw);
+  const {data:row} = await sb.from("complaints").select("pw_hash").eq("id",id).single();
+  if(!row || row.pw_hash !== pw_hash){ toast("비밀번호가 틀렸어요"); return; }
+  const {error} = await sb.from("complaints").update({status:next}).eq("id",id);
+  if(error){ toast("변경 실패: "+error.message); return; }
+  toast(next==="resolved"?"해결됨으로 변경 ✅":"미해결로 변경 🔴");
+  cpLoad();
+}
 
 /* 공감 버튼 */
 async function cpLike(id){
