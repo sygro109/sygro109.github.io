@@ -134,6 +134,18 @@ a{color:var(--brand);text-decoration:none}
 .member-card .mem-meta{font-size:.74rem;color:var(--sub)}
 .mem-pills{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
 
+/* ── 팀 블록 ── */
+.team-block{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;margin-bottom:14px;box-shadow:var(--sh);
+}
+.team-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.team-name{font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.team-count{font-size:.78rem;color:var(--sub);font-weight:600;background:var(--surface2);padding:2px 10px;border-radius:99px}
+.team-del{margin-left:auto}
+.team-addbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.team-addbar .inp{flex:1;min-width:120px}
+
 /* ── 폼 ── */
 .form-grid{display:grid;gap:10px;margin-bottom:14px}
 .form-row{display:flex;flex-wrap:wrap;gap:8px}
@@ -565,20 +577,16 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
     </section>
 
-    <!-- ─────────── 팀원 현황 ─────────── -->
+    <!-- ─────────── 팀별 팀원 현황 ─────────── -->
     <section class="page" id="page-team">
       <div class="card" style="margin-bottom:14px">
-        <div class="card-title"><span class="ct-icon">👤</span>팀원 추가</div>
-        <form id="mf" class="form-row">
-          <input class="inp" id="mem-name" maxlength="20" placeholder="이름" style="flex:1" required>
-          <input class="inp" id="mem-role" maxlength="30" placeholder="역할 (예: 기획, 개발, 디자인)" style="flex:1">
-          <button class="btn" id="mem-add" type="submit">추가</button>
+        <div class="card-title"><span class="ct-icon">➕</span>새 팀 만들기</div>
+        <form id="teamf" class="form-row">
+          <input class="inp" id="team-name-inp" maxlength="30" placeholder="팀 이름 (예: 캡스톤 1팀)" style="flex:1" required>
+          <button class="btn" type="submit">팀 생성</button>
         </form>
       </div>
-      <div class="card">
-        <div class="card-title"><span class="ct-icon">👥</span>팀원 현황</div>
-        <div class="member-grid" id="team-grid"></div>
-      </div>
+      <div id="teams-wrap"></div>
     </section>
 
     <!-- ─────────── 메모 ─────────── -->
@@ -666,7 +674,7 @@ textarea.inp{resize:vertical;min-height:80px}
 
 <script>
 /* ───────────── 상수 & 스토어 ───────────── */
-const K1="kmu-tasks-v2",K2="kmu-free-v2",K3="kmu-notes-v1",K4="kmu-members-v1";
+const K1="kmu-tasks-v2",K2="kmu-free-v2",K3="kmu-notes-v1",K4="kmu-members-v1",K5="kmu-teams-v1";
 const ST={todo:"📋 할 일",doing:"🔥 진행 중",done:"✅ 완료"};
 const NEXT={todo:"doing",doing:"done",done:"todo"};
 const DAYS=["월","화","수","목","금"];
@@ -678,7 +686,15 @@ const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||"[]")}catch{return[]
 let tasks=ld(K1).map(t=>({status:"todo",...t}));
 let free=ld(K2);
 let notes=ld(K3);
-let extraMembers=ld(K4); // 수동 추가 멤버 {name,role}
+let extraMembers=ld(K4); // (구) 수동 추가 멤버 {name,role}
+let teams=ld(K5);        // 팀 [{id, name, members:[{name, role}]}]
+
+/* 기존 팀원(extraMembers)을 '기본 팀'으로 1회 마이그레이션 */
+if(teams.length===0 && extraMembers.length>0){
+  teams=[{id:Date.now().toString(36), name:"기본 팀", members:extraMembers.map(m=>({name:m.name, role:m.role||""}))}];
+}
+
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 const sv=()=>{
   try{
@@ -686,6 +702,7 @@ const sv=()=>{
     localStorage.setItem(K2,JSON.stringify(free));
     localStorage.setItem(K3,JSON.stringify(notes));
     localStorage.setItem(K4,JSON.stringify(extraMembers));
+    localStorage.setItem(K5,JSON.stringify(teams));
   }catch(e){}
 };
 
@@ -847,22 +864,43 @@ const dBadge=t=>{
     :`<span class="chip chip-blue">D-${d}</span>`;
 };
 
-/* ───────────── 팀원 ───────────── */
-$("mf").addEventListener("submit",e=>{
+/* ───────────── 팀 & 팀원 ───────────── */
+/* 팀 생성 */
+$("teamf").addEventListener("submit",e=>{
   e.preventDefault();
-  const n=$("mem-name").value.trim(),r=$("mem-role").value.trim();
-  if(!n){toast("이름을 입력해주세요");return}
-  if(!extraMembers.find(m=>m.name===n)){
-    extraMembers.push({name:n,role:r});sv();render();toast(`${n} 추가됐어요 👤`);
-  }else{
-    extraMembers=extraMembers.map(m=>m.name===n?{...m,role:r}:m);
-    sv();render();toast(`${n} 역할 업데이트됐어요 ✏️`);
-  }
-  $("mem-name").value="";$("mem-role").value="";$("mem-name").focus();
+  const name=$("team-name-inp").value.trim();
+  if(!name){toast("팀 이름을 입력해주세요");return}
+  if(teams.find(t=>t.name===name)){toast("같은 이름의 팀이 있어요");return}
+  teams.push({id:uid(), name, members:[]});
+  sv();render();toast(`'${name}' 팀을 만들었어요 �`);
+  $("team-name-inp").value="";$("team-name-inp").focus();
 });
 
-function memDel(name){
-  extraMembers=extraMembers.filter(m=>m.name!==name);sv();render();toast("삭제됐어요 🗑️");
+/* 팀 삭제 */
+function teamDel(id){
+  const t=teams.find(x=>x.id===id);if(!t)return;
+  if(!confirm(`'${t.name}' 팀을 삭제할까요? 팀원도 함께 삭제돼요.`))return;
+  teams=teams.filter(x=>x.id!==id);sv();render();toast("팀이 삭제됐어요 🗑️");
+}
+
+/* 팀원 추가 (팀 카드 내 입력 → 전역에서 처리) */
+function memAdd(teamId){
+  const nameEl=$(`mem-name-${teamId}`), roleEl=$(`mem-role-${teamId}`);
+  const n=nameEl.value.trim(), r=roleEl.value.trim();
+  if(!n){toast("이름을 입력해주세요");return}
+  const t=teams.find(x=>x.id===teamId);if(!t)return;
+  const exist=t.members.find(m=>m.name===n);
+  if(exist){ exist.role=r; toast(`${n} 역할을 업데이트했어요 ✏️`); }
+  else{ t.members.push({name:n, role:r}); toast(`${n} 추가됐어요 👤`); }
+  sv();render();
+  const again=$(`mem-name-${teamId}`); if(again)again.focus();
+}
+
+/* 팀원 삭제 */
+function memDel(teamId, name){
+  const t=teams.find(x=>x.id===teamId);if(!t)return;
+  t.members=t.members.filter(m=>m.name!==name);
+  sv();render();toast("팀원이 삭제됐어요 🗑️");
 }
 
 /* ───────────── 메모 ───────────── */
@@ -955,20 +993,19 @@ function renderSettings(){
   const td=tasks.filter(t=>t.status==="done").length;
   const doing=tasks.filter(t=>t.status==="doing").length;
   const over=tasks.filter(t=>t.status!=="done"&&dday(t.due)<0).length;
-  const totalFreeMin=free.reduce((a,f)=>a+mm(f.e)-mm(f.s),0);
   $("stats-detail").innerHTML=`
     <div class="bar-row"><span>전체 할 일</span><div class="track" style="height:8px"><div class="fill" style="width:100%"></div></div><span>${tasks.length}개</span></div>
     <div class="bar-row"><span>완료</span><div class="track" style="height:8px"><div class="fill" style="width:${tasks.length?td/tasks.length*100:0}%"></div></div><span>${td}개</span></div>
     <div class="bar-row"><span>진행 중</span><div class="track" style="height:8px"><div class="fill" style="background:var(--amber);width:${tasks.length?doing/tasks.length*100:0}%"></div></div><span>${doing}개</span></div>
     <div class="bar-row"><span>기한 초과</span><div class="track" style="height:8px"><div class="fill" style="background:var(--red);width:${tasks.length?over/tasks.length*100:0}%"></div></div><span>${over}개</span></div>
-    <div style="margin-top:12px;font-size:.85rem;color:var(--sub)">등록된 공강 시간: ${dur(totalFreeMin)} / 메모: ${notes.length}개 / 팀원: ${getAllNames().length}명</div>
+    <div style="margin-top:12px;font-size:.85rem;color:var(--sub)">팀: ${teams.length}개 / 팀원: ${getAllNames().length}명 / 메모: ${notes.length}개</div>
   `;
 }
 
 /* ───────────── 백업 ───────────── */
 function doExport(){
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([JSON.stringify({tasks,free,notes,extraMembers},null,2)],{type:"application/json"}));
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({tasks,notes,teams},null,2)],{type:"application/json"}));
   a.download=`teamboard-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   toast("내보내기 완료 💾");
@@ -988,9 +1025,9 @@ $("file").onchange=e=>{
       if(!Array.isArray(t))throw 0;
       if(!confirm("백업을 불러올까요? 현재 데이터가 대체됩니다."))return;
       tasks=t.map(x=>({status:"todo",id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...x}));
-      if(Array.isArray(o.free))free=o.free;
       if(Array.isArray(o.notes))notes=o.notes;
-      if(Array.isArray(o.extraMembers))extraMembers=o.extraMembers;
+      if(Array.isArray(o.teams))teams=o.teams;
+      else if(Array.isArray(o.extraMembers))teams=[{id:uid(),name:"기본 팀",members:o.extraMembers.map(m=>({name:m.name,role:m.role||""}))}];
       sv();render();toast("불러오기 완료 📂");
     }catch{alert("올바른 백업 파일이 아니에요.")}
   };
@@ -1000,7 +1037,7 @@ $("file").onchange=e=>{
 $("reset-all").onclick=()=>{
   if(!confirm("정말 모든 데이터를 삭제할까요? 되돌릴 수 없어요."))return;
   if(!confirm("한 번 더 확인할게요. 전체 초기화할까요?"))return;
-  tasks=[];free=[];notes=[];extraMembers=[];sv();render();toast("초기화됐어요 🗑️");
+  tasks=[];notes=[];teams=[];extraMembers=[];sv();render();toast("초기화됐어요 🗑️");
 };
 
 /* ───────────── 배지 업데이트 ───────────── */
@@ -1014,10 +1051,10 @@ function updateBadges(){
 
 /* ───────────── 이름 목록 ───────────── */
 function getAllNames(){
+  const teamMembers=teams.flatMap(t=>t.members.map(m=>m.name));
   return[...new Set([
     ...tasks.map(t=>t.owner),
-    ...free.map(f=>f.owner),
-    ...extraMembers.map(m=>m.name),
+    ...teamMembers,
   ])].filter(Boolean).sort();
 }
 
@@ -1032,23 +1069,39 @@ function render(){
   /* 배지 */
   updateBadges();
 
-  /* 팀원 현황 페이지 */
-  $("team-grid").innerHTML=allNames.map(n=>{
-    const ta=tasks.filter(t=>t.owner===n);
-    const tdone=ta.filter(t=>t.status==="done").length;
-    const em=extraMembers.find(m=>m.name===n);
-    const pct=ta.length?Math.round(tdone/ta.length*100):0;
-    return`<div class="member-card">
-      ${av(n,"lg")}
-      <div class="mem-name">${esc(n)}</div>
-      ${em?.role?`<div class="mem-meta">${esc(em.role)}</div>`:""}
-      <div class="mem-pills">
-        <span class="chip chip-blue">📋 ${tdone}/${ta.length} 완료</span>
-      </div>
-      ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
-      ${em?`<button class="btn btn-ghost btn-sm" onclick="memDel('${esc(n)}')">삭제</button>`:""}
-    </div>`;
-  }).join("")||`<div class="empty">아직 팀원이 없어요.<br>위에서 팀원을 추가하거나 할 일을 등록하면 자동으로 등록돼요 👥</div>`;
+  /* 팀별 팀원 현황 페이지 */
+  $("teams-wrap").innerHTML = teams.length
+    ? teams.map(team=>{
+        const membersHTML = team.members.length
+          ? `<div class="member-grid">${team.members.map(m=>{
+              const ta=tasks.filter(t=>t.owner===m.name);
+              const tdone=ta.filter(t=>t.status==="done").length;
+              const pct=ta.length?Math.round(tdone/ta.length*100):0;
+              return`<div class="member-card">
+                ${av(m.name,"lg")}
+                <div class="mem-name">${esc(m.name)}</div>
+                ${m.role?`<div class="mem-meta">${esc(m.role)}</div>`:""}
+                <div class="mem-pills"><span class="chip chip-blue">📋 ${tdone}/${ta.length} 완료</span></div>
+                ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
+                <button class="btn btn-ghost btn-sm" onclick="memDel('${team.id}','${esc(m.name)}')">삭제</button>
+              </div>`;
+            }).join("")}</div>`
+          : `<div class="empty" style="padding:16px 0">아직 팀원이 없어요. 아래에서 추가해보세요 👤</div>`;
+        return`<div class="team-block">
+          <div class="team-head">
+            <span class="team-name">👥 ${esc(team.name)}</span>
+            <span class="team-count">${team.members.length}명</span>
+            <button class="btn btn-ghost btn-sm team-del" onclick="teamDel('${team.id}')">팀 삭제</button>
+          </div>
+          <div class="team-addbar">
+            <input class="inp" id="mem-name-${team.id}" maxlength="20" placeholder="이름" onkeydown="if(event.key==='Enter')memAdd('${team.id}')">
+            <input class="inp" id="mem-role-${team.id}" maxlength="30" placeholder="역할 (예: 기획, 개발)" onkeydown="if(event.key==='Enter')memAdd('${team.id}')">
+            <button class="btn btn-sm" onclick="memAdd('${team.id}')">팀원 추가</button>
+          </div>
+          ${membersHTML}
+        </div>`;
+      }).join("")
+    : `<div class="card"><div class="empty">아직 만든 팀이 없어요.<br>위에서 새 팀을 만들어보세요 👥</div></div>`;
 
   /* 할 일 목록 */
   document.querySelectorAll("#fchips button").forEach(b=>b.classList.toggle("on",b.dataset.f===fil));
