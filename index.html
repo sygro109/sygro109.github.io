@@ -372,6 +372,22 @@ textarea.inp{resize:vertical;min-height:80px}
 .cp-grid{display:flex;flex-direction:column;gap:10px}
 .cp-empty{text-align:center;padding:48px 0;color:var(--sub);font-size:.9rem}
 .cp-loading{text-align:center;padding:24px 0;color:var(--sub);font-size:.85rem}
+
+/* ── 댓글 ── */
+.cp-cmt-toggle{
+  border:0;background:none;color:var(--sub);font-size:.8rem;font-weight:700;
+  padding:4px 0;text-align:left;transition:color .15s;
+}
+.cp-cmt-toggle:hover{color:var(--brand)}
+.cp-cmt-wrap{border-top:1px solid var(--line);padding-top:10px;margin-top:2px;display:none;flex-direction:column;gap:8px}
+.cp-cmt-wrap.open{display:flex}
+.cp-cmt{background:var(--surface2);border-radius:10px;padding:8px 12px;font-size:.84rem}
+.cp-cmt-head{display:flex;gap:8px;align-items:center;font-size:.74rem;color:var(--sub);margin-bottom:2px}
+.cp-cmt-name{font-weight:700;color:var(--text)}
+.cp-cmt-body{line-height:1.5;white-space:pre-wrap}
+.cp-cmt-form{display:flex;gap:6px;flex-wrap:wrap}
+.cp-cmt-form .inp{padding:7px 10px;font-size:.82rem}
+.cp-cmt-empty{font-size:.8rem;color:var(--sub);text-align:center;padding:6px 0}
 .hero-banner{
   background:linear-gradient(135deg,var(--brand),var(--brand2));
   border-radius:var(--radius);padding:28px 24px;color:#fff;margin-bottom:14px;
@@ -523,6 +539,10 @@ textarea.inp{resize:vertical;min-height:80px}
           <button class="chip" data-status="pending">🔴 미해결</button>
           <button class="chip" data-status="resolved">✅ 해결됨</button>
         </div>
+        <div class="chips" id="cp-sort-chips" style="margin-bottom:14px">
+          <button class="chip on" data-sort="recent">🕒 최신순</button>
+          <button class="chip" data-sort="sympathy">❤️ 공감순</button>
+        </div>
         <div class="cp-grid" id="cp-list"><div class="cp-loading">불러오는 중...</div></div>
       </div>
     </section>
@@ -585,6 +605,10 @@ textarea.inp{resize:vertical;min-height:80px}
           <input class="inp" id="team-name-inp" maxlength="30" placeholder="팀 이름 (예: 캡스톤 1팀)" style="flex:1" required>
           <button class="btn" type="submit">팀 생성</button>
         </form>
+        <div style="margin-top:10px;font-size:.8rem;color:var(--sub);background:var(--brand-dim);padding:10px 12px;border-radius:10px;line-height:1.5">
+          💡 팀원 카드의 <b>📋 0/0 완료</b>는 그 팀원이 맡은 할 일의 (완료 개수)/(전체 개수)예요.<br>
+          <b>할 일 &amp; 캘린더</b>에서 담당자를 팀원 이름으로 지정하면 진행률이 자동으로 집계돼요.
+        </div>
       </div>
       <div id="teams-wrap"></div>
     </section>
@@ -1081,7 +1105,11 @@ function render(){
                 ${av(m.name,"lg")}
                 <div class="mem-name">${esc(m.name)}</div>
                 ${m.role?`<div class="mem-meta">${esc(m.role)}</div>`:""}
-                <div class="mem-pills"><span class="chip chip-blue">📋 ${tdone}/${ta.length} 완료</span></div>
+                <div class="mem-pills">${
+                  ta.length
+                    ? `<span class="chip chip-blue" title="이 팀원이 맡은 할 일 중 완료한 개수예요">📋 ${tdone}/${ta.length} 완료 <span style="opacity:.6">ⓘ</span></span>`
+                    : `<span class="chip" title="할 일 & 캘린더에서 담당자를 이 팀원 이름으로 지정하면 집계돼요">📋 맡은 할 일 없음 <span style="opacity:.6">ⓘ</span></span>`
+                }</div>
                 ${ta.length?`<div class="mem-progress"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><div class="mem-pct">${pct}%</div></div>`:""}
                 <button class="btn btn-ghost btn-sm" onclick="memDel('${team.id}','${esc(m.name)}')">삭제</button>
               </div>`;
@@ -1175,7 +1203,7 @@ function getLiked(){ try{ return new Set(JSON.parse(localStorage.getItem(LIKED_K
 function saveLiked(s){ try{ localStorage.setItem(LIKED_KEY, JSON.stringify([...s])); }catch{} }
 
 /* 필터 상태 */
-let cpCat = "", cpStatus = "";
+let cpCat = "", cpStatus = "", cpSort = "recent";
 
 /* 카테고리 필터 칩 이벤트 */
 $("cp-filter-chips").onclick = e => {
@@ -1190,6 +1218,13 @@ $("cp-status-chips").onclick = e => {
   if(!b) return;
   cpStatus = b.dataset.status;
   document.querySelectorAll("#cp-status-chips .chip").forEach(c => c.classList.toggle("on", c.dataset.status === cpStatus));
+  cpLoad();
+};
+$("cp-sort-chips").onclick = e => {
+  const b = e.target.closest(".chip");
+  if(!b) return;
+  cpSort = b.dataset.sort;
+  document.querySelectorAll("#cp-sort-chips .chip").forEach(c => c.classList.toggle("on", c.dataset.sort === cpSort));
   cpLoad();
 };
 
@@ -1225,13 +1260,61 @@ function cpCardHTML(r, liked){
         ❤️ <span class="count" id="cp-like-${r.id}">${r.sympathy||0}</span>
       </button>
     </div>
+    <button class="cp-cmt-toggle" id="cp-cmt-toggle-${r.id}" onclick="cpToggleComments(${r.id})">💬 댓글 <span id="cp-cmt-count-${r.id}">${r.comment_count||0}</span></button>
+    <div class="cp-cmt-wrap" id="cp-cmt-wrap-${r.id}">
+      <div id="cp-cmt-list-${r.id}"><div class="cp-cmt-empty">댓글을 불러오는 중...</div></div>
+      <div class="cp-cmt-form">
+        <input class="inp" id="cp-cmt-name-${r.id}" maxlength="20" placeholder="닉네임 (선택)" style="flex:1;min-width:90px">
+        <input class="inp" id="cp-cmt-body-${r.id}" maxlength="200" placeholder="댓글을 입력하세요" style="flex:2;min-width:140px" onkeydown="if(event.key==='Enter')cpAddComment(${r.id})">
+        <button class="btn btn-sm" onclick="cpAddComment(${r.id})">등록</button>
+      </div>
+    </div>
   </div>`;
+}
+
+/* 댓글 영역 펼치기/접기 */
+async function cpToggleComments(id){
+  const wrap = $(`cp-cmt-wrap-${id}`);
+  if(!wrap) return;
+  wrap.classList.toggle("open");
+  if(wrap.classList.contains("open")) await cpLoadComments(id);
+}
+
+/* 특정 불편사항의 댓글 불러오기 */
+async function cpLoadComments(id){
+  const listEl = $(`cp-cmt-list-${id}`);
+  if(!listEl) return;
+  const {data, error} = await sb.from("comments").select("*").eq("complaint_id",id).order("created_at",{ascending:true});
+  if(error){ listEl.innerHTML=`<div class="cp-cmt-empty">⚠️ 댓글 불러오기 실패: ${esc(error.message)}</div>`; return; }
+  const cntEl = $(`cp-cmt-count-${id}`);
+  if(cntEl) cntEl.textContent = data.length;
+  if(!data.length){ listEl.innerHTML='<div class="cp-cmt-empty">아직 댓글이 없어요. 첫 댓글을 남겨보세요 💬</div>'; return; }
+  listEl.innerHTML = data.map(c=>`<div class="cp-cmt">
+    <div class="cp-cmt-head"><span class="cp-cmt-name">${esc(c.nickname||"익명")}</span><span>${cpFmt(c.created_at)}</span></div>
+    <div class="cp-cmt-body">${esc(c.body)}</div>
+  </div>`).join("");
+}
+
+/* 댓글 작성 */
+async function cpAddComment(id){
+  const nameEl = $(`cp-cmt-name-${id}`), bodyEl = $(`cp-cmt-body-${id}`);
+  const nickname = nameEl.value.trim() || "익명";
+  const body = bodyEl.value.trim();
+  if(!body){ toast("댓글 내용을 입력해주세요"); return; }
+  const {error} = await sb.from("comments").insert({complaint_id:id, nickname, body});
+  if(error){ toast("댓글 등록 실패: "+error.message); return; }
+  bodyEl.value="";
+  toast("댓글이 등록됐어요 💬");
+  await cpLoadComments(id);
 }
 
 /* 목록 불러오기 */
 async function cpLoad(){
   $("cp-list").innerHTML = '<div class="cp-loading">불러오는 중...</div>';
-  let q = sb.from("complaints").select("*",{count:"exact"}).order("sympathy",{ascending:false}).order("created_at",{ascending:false}).limit(100);
+  let q = sb.from("complaints").select("*",{count:"exact"});
+  if(cpSort==="sympathy") q = q.order("sympathy",{ascending:false}).order("created_at",{ascending:false});
+  else                    q = q.order("created_at",{ascending:false});
+  q = q.limit(100);
   if(cpCat)    q = q.eq("category", cpCat);
   if(cpStatus) q = q.eq("status", cpStatus);
   const {data, error, count} = await q;
@@ -1239,6 +1322,16 @@ async function cpLoad(){
   $("cp-total").textContent = count ? `(${count}건)` : "";
   const liked = getLiked();
   if(!data.length){ $("cp-list").innerHTML='<div class="cp-empty">아직 접수된 불편사항이 없어요.<br>첫 번째로 제보해주세요 📢</div>'; return; }
+  /* 각 글의 댓글 수 함께 가져오기 */
+  try{
+    const ids = data.map(r=>r.id);
+    const {data:cmts} = await sb.from("comments").select("complaint_id").in("complaint_id",ids);
+    if(cmts){
+      const cnt = {};
+      cmts.forEach(c=>{ cnt[c.complaint_id]=(cnt[c.complaint_id]||0)+1; });
+      data.forEach(r=>{ r.comment_count = cnt[r.id]||0; });
+    }
+  }catch(e){}
   $("cp-list").innerHTML = data.map(r => cpCardHTML(r, liked)).join("");
   const b = $("badge-complaints");
   const pending = data.filter(r=>r.status==="pending").length;
